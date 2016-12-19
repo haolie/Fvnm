@@ -74,7 +74,6 @@ suporter.prototype.getValueByDayNo=function(item,callback){
 
 
         if(err){
-            db.close();
             callback(err,0);
         }
         else {
@@ -167,6 +166,22 @@ suporter.prototype.transData=function(code,callback){
 
 }
 
+suporter.prototype.getfaces=function(item,callback){
+
+    MongoClient.connect(dburl, function(err, db) {
+        var cl=db.collection(codeface);
+        //process.send("db:"+cl!=null);
+        cl.find(item).toArray(function(err,result){
+            db.close();
+            if(err||  result.length==0)
+                callback(err,null);
+            else
+                callback(err,result);
+        });
+    });
+}
+
+
 suporter.prototype.getcodeface=function(code,date,callback){
 
 
@@ -241,40 +256,9 @@ suporter.prototype. getSpiedList=function(array,percount,listcount,enfun){
 
 suporter.prototype.test=function(){
 
-    //var item={};
-    //item.no="600149";
-    //item.date=new Date("2016-12-13")
-    //module.exports.getValueByDayNo(item,function(er,result){
-    //
-    //})
+module.exports.getcodeface("300469","2016-12-19",function(a,b){
 
-    process.send("121");
-
-    process.exit();
-    http.createServer(function (req, res) {
-
-        args= url.parse(req.url,true).query;
-        if(args==null||args.no==null||args.no==""||args.date==null||args.date.length==0){
-
-            res.end("formate error");
-            return
-        }
-
-        var item={};
-        item.no=args.no;
-        item.date=new Date(args.date)
-        module.exports.getValueByDayNo(item,function(er,result){
-            res.writeHead(200, {'Content-Type': 'text/plain'});
-            res.end(JSON.stringify(result));
-        })
-
-        //res.writeHead(200, {'Content-Type': 'text/plain'});
-        //
-        //res.end('Hello World\n');
-
-    }).listen(12122);
-    //console.log('Server running at http://
-
+})
 
 
 }

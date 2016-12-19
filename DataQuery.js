@@ -16,7 +16,7 @@ vm.prototype.ondatefacequery=function(req,res,query){
         return
     }
 
-    nohelper.getallnofromlocal(query.query.date,function(err,faces){
+    dbsuport.getfaces({date:query.query.date,face:2},function(err,faces){
 
         res.end(JSON.stringify(faces));
     })
@@ -34,7 +34,7 @@ vm.prototype.ondayvalueQuery=function(req,res,query){
     var item={};
     item.no=query.no;
     item.date=new Date(query.date)
-    dbsuport.getcodeface(item.no,item.date,function(err,face){
+    dbsuport.getcodeface(query.no,query.date,function(err,face){
         dbsuport.getValueByDayNo(item,function(er,result){
             var  o= {
                 max:face.max,
@@ -57,8 +57,8 @@ vm.prototype.start=function(){
         var request=url.parse(req.url,true)
         args= url.parse(req.url,true).query;
 
-        if(request.pathname=="//dateface") module.exports.ondatefacequery(req,res,request);
-        else if (request.pathname=="//dayvalue")module.exports.ondayvalueQuery(req,res,request.query);
+        if(request.pathname=="/dateface") module.exports.ondatefacequery(req,res,request);
+        else if (request.pathname=="/dayvalue")module.exports.ondayvalueQuery(req,res,request.query);
         else   res.end("not find!");
 
 

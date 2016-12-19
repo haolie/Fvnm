@@ -235,6 +235,8 @@ DataMeeter.prototype.consoleTimes=function(str){
 }
 
 DataMeeter.prototype.getFace=function(item){
+    var allvalues=item.data.values();
+
 
 }
 

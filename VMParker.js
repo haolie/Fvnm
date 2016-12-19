@@ -24,7 +24,19 @@ vm.prototype.timeConsole=function(str){
 
 vm.prototype.startDataServer=function(){
     var worker= fork("DataQuery.js")
+
+    worker.on("message",function(msg){
+        module.exports.timeConsole(msg);
+    })
+
+    worker.on("exit",function(){
+        console.log("DataQuery exit");
+        worker.kill();
+        worker=null;
+        setTimeout(module.exports.startDataServer,5000);
+    })
 }
+
 
 vm.prototype.start=function(){
     module.exports.startDataMeeter();
