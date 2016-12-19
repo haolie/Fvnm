@@ -5,10 +5,12 @@ var http = require('http');
 var async=require("async");
 var percount=70;
 var token="";
+var fs= require('fs');
+var path = require('path');
 
 var nohelper=function Nohelper(){}
 
-nohelper.prototype.getallno=function(callback){
+nohelper.prototype.getallnofromweb=function(callback){
     var index=1;
     var pageCount=0;
     var allcodes=[];
@@ -60,7 +62,7 @@ nohelper.prototype.getno=function(index,callback){
                 var codestr=temp.result[i][0].toString();
                 codestr=codestr.replace(".sz","");
                 codestr=codestr.replace(".sh","");
-                result.push(codestr);
+                result.push({no:codestr,price:temp.result[i][2],ud:temp.result[i][4]});
             }
             if(callback)(callback(null,result));
         })
@@ -70,8 +72,10 @@ nohelper.prototype.getno=function(index,callback){
 nohelper.prototype.getToken=function(callback){
     var date=new Date();
     var datastr=date.getFullYear()+'.'+date.getMonth()+"."+date.getDate();
-    var url="http://www.iwencai.com/stockpick/search?typed=1&preParams=&ts=1&f=1&qs=result_rewrite&selfsectsn=&querytype=&searchfilter=&tid=stockpick&w=%E5%87%80%E9%87%8F";
-    url+=datastr;
+    //var url="http://www.iwencai.com/stockpick/search?typed=1&preParams=&ts=1&f=1&qs=result_rewrite&selfsectsn=&querytype=&searchfilter=&tid=stockpick&w=%E5%87%80%E9%87%8F";
+    var url="http://www.iwencai.com/stockpick/search?typed=1&preParams=&ts=1&f=1&qs=result_rewrite&selfsectsn=&querytype=&searchfilter=&tid=stockpick&w=%E6%B6%A8%E8%B7%8C";
+    //url+=datastr;
+   // url+="涨跌";
    http.get(url,function(resp){
        var length=0;
        var chunks=[];
@@ -91,4 +95,43 @@ nohelper.prototype.getToken=function(callback){
    })
 }
 
-module.exports=new nohelper();
+nohelper.prototype.savenofile=function(items,callback){
+    fs.writeFile(path.join(__dirname, 'history/'+global.datestr), JSON.stringify(items), function (err) {
+        if(callback){
+            callback(err);
+        }
+    });
+
+}
+
+nohelper.prototype.getallnofromlocal=function(datestr, callback){
+    fs.exists(path.join(__dirname, 'history/'+datestr),function(exist){
+        if(exist){
+            fs.readFile(path.join(__dirname, 'history/'+datestr), function (err,bytesRead) {
+                callback(err,JSON.parse( bytesRead.toString()))
+            });
+        }
+        else {
+            callback(1,null);
+        }
+    })
+}
+
+nohelper.prototype.getallno=function(getallnocallback){
+
+    module.exports.getallnofromlocal(global.datestr,function(err,items){
+        if(err==null)
+            getallnocallback(err,items);
+        else
+        module.exports.getallnofromweb(function(err,items){
+            if(err)getallnocallback("获取出错",null);
+            else{
+                module.exports.savenofile(items)
+                getallnocallback(null,items);
+            }
+        })
+    })
+}
+
+
+module.exports=new nohelper()

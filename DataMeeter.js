@@ -7,7 +7,6 @@ var async=require("async");
 var hashmap=require("hashmap");
 var nohelper = require('./nohelper.js');
 var dbsuport = require('./MGDBSuport.js');
-var nohelper = require('./nohelper.js');
 var  process = require('process');
 var url=require("url");
 
@@ -62,7 +61,7 @@ DataMeeter.prototype.checkValueDate=function(callback){
             var str=chunks.toString();
             str=str.substring(str.length-25);
             str=str.substring(0,10);
-
+            global.datestr=str;
             //var datastr=date.getFullYear()+"-"+(date.getMonth()+1)+"-"+date.getDate();
             dbsuport.getcodeface("000001",str,function(err,result){
                 callback(null,result!=null);
@@ -76,6 +75,11 @@ DataMeeter.prototype.checkValueDate=function(callback){
 }
 
 DataMeeter.prototype.getValuesByNo=function(item,allcallback){
+
+     if(item.tag.save){
+            allcallback(null,item);
+            return;
+        }
 
         async.map(module.exports.getUrlsByCode(item.no),function(codeurl,callback){
             var  longstr="";
@@ -93,7 +97,7 @@ DataMeeter.prototype.getValuesByNo=function(item,allcallback){
                     try {
                         var temp=JSON.parse(buf.toString().toLowerCase());
                     }catch(er) {
-                        process.send(item.no+"  数据获取失败");
+                        module.exports.console(item.no+"  数据获取失败");
                         callback(0,0);
                         return;
                     }
@@ -128,10 +132,10 @@ DataMeeter.prototype.getValuesByNo=function(item,allcallback){
             var allvalues=item.data.values();
             dbsuport.saveTimePrice(allvalues,function(err,result){
                 if(err){
-                    process.send(item.no+ ' 保存失败')
+                    module.exports.console(item.no+ ' 保存失败')
                 }
                 else {
-                    process.send(item.no+ ' 保存成功')
+                    module.exports.console(item.no+ ' 保存成功')
                 }
                 if(allvalues.length){
                     var date=new Date();
@@ -142,15 +146,20 @@ DataMeeter.prototype.getValuesByNo=function(item,allcallback){
                         date:datastr,
                         min:item.min,
                         max:item.max,
-                        lastPrice:allvalues[allvalues.length-1].price
+                        ud:item.tag.ud,
+                        lastPrice:item.tag.price
                     };
 
                     dbsuport.updatacodeface(face);
                 }
 
-                cur++;
-                process.send(cur+"/"+total);
-                dbsuport.removeCodes([item.no]);
+                for(var i in global.curCodes){
+                    if(global.curCodes[i].no==item.no){
+                        global.curCodes[i].save=true;
+                        module.exports.console(i+"/"+global.curCodes.length);
+                    }
+                }
+
                 item.data=null;
                 allcallback(0,result);
             });
@@ -162,9 +171,7 @@ var cur=0;
 var starttime;
 DataMeeter.prototype.getAllCodeValues=function(codes){
     var list=[];
-    cur=0;
     starttime=new Date();
-    total=codes.length;
     var start=new Date();
     start.setHours(9);
     start.setMinutes(0);
@@ -178,8 +185,9 @@ DataMeeter.prototype.getAllCodeValues=function(codes){
     for(var i=0;i<codes.length;i++){
         list.push(
             {
-                no:String(codes[i]) ,
+                no:String(codes[i].no) ,
                 data:new hashmap(),
+                tag:codes[i],
                 start:start,
                 end:end,
                 min:10000,
@@ -190,7 +198,7 @@ DataMeeter.prototype.getAllCodeValues=function(codes){
 
     async.mapLimit(list,1,module.exports.getValuesByNo,function(err,results){
         var date=new Date();
-        process.send(date.getMonth()+""+date.getDate()+""+"data save succeed")
+        module.exports.console(date.getMonth()+""+date.getDate()+""+"data save succeed")
 
         var ms=new Date().valueOf()-starttime.valueOf();
         var m=0;
@@ -200,7 +208,7 @@ DataMeeter.prototype.getAllCodeValues=function(codes){
         m=Math.floor(s/60);
         s=Math.floor(s%60);
 
-        process.send("耗时 "+m+":"+s+";"+ms);
+        module.exports.console("耗时 "+m+":"+s+";"+ms);
 
         var datastr=date.getFullYear()+"-"+(date.getMonth()+1)+"-"+date.getDate();
         dbsuport.updatacodeface({
@@ -208,7 +216,7 @@ DataMeeter.prototype.getAllCodeValues=function(codes){
             no:"000001",
             date:datastr
         },function(err,r){
-            setTimeout(5000,process.exit());
+            global.curCodes=null;
         });
 
     })
@@ -223,36 +231,40 @@ DataMeeter.prototype.consoleTimes=function(str){
     m=Math.floor(s/60);
     s=Math.floor(s%60);
 
-    process.send(str+ " "+m+":"+s+";"+ms);
+    module.exports.console(str+ " "+m+":"+s+";"+ms);
 }
 
 DataMeeter.prototype.getFace=function(item){
 
 }
 
+DataMeeter.prototype.console=function(item){
+    if(process.send)
+     process.send(item);
+    else
+    console.log(item);
+}
+
 DataMeeter.prototype.startwork=function(){
     module.exports.isWorking=true;
     module.exports.checkValueDate(function(err,result){
 
-        process.send("checkValueDate:"+result);
+        module.exports.console("checkValueDate:"+result);
         if(result) {
             module.exports.isWorking=false;
             return;
         }
 
-        process.send("start data meet");
-        dbsuport.getAllCodes(function(err,codes){
-            if(codes==null||codes.length==0){
-                nohelper.getallno(function(err,allno){
-                    dbsuport.saveCodes(allno,function(err,count){
-                        process.send(count);
-                        module.exports.getAllCodeValues(allno);
-                    });
-                })
-            }
-            else module.exports.getAllCodeValues(codes);
-        });
-
+        module.exports.console("start data meet");
+        if(global.curCodes==null){
+            nohelper.getallno(function(err,allno){
+                global.curCodes=allno;
+                module.exports.getAllCodeValues(allno);
+            })
+        }
+        else{
+            module.exports.getAllCodeValues(global.curCodes);
+        }
     });
 }
 
@@ -268,28 +280,7 @@ DataMeeter.prototype.start=function(){
 
     module.exports.startwork();
 
-    http.createServer(function (req, res) {
 
-        args= url.parse(req.url,true).query;
-        if(args==null||args.no==null||args.no==""||args.date==null||args.date.length==0){
-
-            res.end("formate error");
-            return
-        }
-
-        var item={};
-        item.no=args.no;
-        item.date=new Date(args.date)
-        module.exports.getValueByDayNo(item,function(er,result){
-            res.writeHead(200, {'Content-Type': 'text/plain'});
-            res.end(JSON.stringify(result));
-        })
-
-        //res.writeHead(200, {'Content-Type': 'text/plain'});
-        //
-        //res.end('Hello World\n');
-
-    }).listen(12122);
 }
 
 

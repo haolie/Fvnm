@@ -1,0 +1,71 @@
+/**
+ * Created by LYH on 2016/12/19.
+ */
+var http = require('http');
+var nohelper = require('./nohelper.js');
+var dbsuport = require('./MGDBSuport.js');
+var  process = require('process');
+var url=require("url");
+
+var vm=function(){}
+
+vm.prototype.ondatefacequery=function(req,res,query){
+    if(query.query.date==null||query.query.date==""){
+
+        res.end("not find date error");
+        return
+    }
+
+    nohelper.getallnofromlocal(query.query.date,function(err,faces){
+
+        res.end(JSON.stringify(faces));
+    })
+}
+
+vm.prototype.ondayvalueQuery=function(req,res,query){
+
+
+    if(query==null||query.no==null||query.no==""||query.date==null||query.date.length==0){
+
+        res.end("formate error");
+        return
+    }
+
+    var item={};
+    item.no=query.no;
+    item.date=new Date(query.date)
+    dbsuport.getcodeface(item.no,item.date,function(err,face){
+        dbsuport.getValueByDayNo(item,function(er,result){
+            var  o= {
+                max:face.max,
+                min:face.min,
+                ud:face.ud,
+                data:result
+            }
+            res.writeHead(200, {'Content-Type': 'text/plain'});
+            res.end(JSON.stringify(o));
+        })
+    });
+
+}
+
+vm.prototype.start=function(){
+
+    http.createServer(function (req, res) {
+
+        res.writeHead(200, {'Content-Type': 'text/plain'});
+        var request=url.parse(req.url,true)
+        args= url.parse(req.url,true).query;
+
+        if(request.pathname=="//dateface") module.exports.ondatefacequery(req,res,request);
+        else if (request.pathname=="//dayvalue")module.exports.ondayvalueQuery(req,res,request.query);
+        else   res.end("not find!");
+
+
+
+    }).listen(12122);
+
+}
+
+module.exports=new vm();
+module.exports.start();

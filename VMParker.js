@@ -23,11 +23,12 @@ vm.prototype.timeConsole=function(str){
 }
 
 vm.prototype.startDataServer=function(){
-
+    var worker= fork("DataQuery.js")
 }
 
 vm.prototype.start=function(){
     module.exports.startDataMeeter();
+    module.exports.startDataServer();
 }
 
 module.exports=new vm();
