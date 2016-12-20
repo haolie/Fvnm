@@ -2,17 +2,18 @@
  * Created by LYH on 2016/12/20.
  */
 
-var baseUrl="http://58.20.245.98:8686/node/";
+var baseUrl="http://localhost:8080/node/";
 jQuery(function($){
 
-    $( "#datepicker").change(function(a,b){
-        var date=new Date(a.target.value);
 
+    $( "#btncodeface").click(function(a,b){
+        var date=$("#datepicker").datepicker("getDate");
+        $("#aolist").html("");
         var datestr=date.getFullYear()+"-"+(date.getMonth()+1)+"-"+date.getDate();
-        $.get(baseUrl+ "dateface?date="+datestr,function(data,status){
+        $.get(baseUrl+ "dateface?face=2&per=3&date="+datestr,function(data,status){
             var items= eval(data);
             for(var i in items){
-                var temp =  $('<li><a ><i class="menu-icon fa fa-caret-right"></i></a> <b class="arrow"></b></li>');
+                var temp =  $('<li style="cursor: pointer"><a ><i class="menu-icon fa fa-caret-right"></i></a> <b class="arrow"></b></li>');
                 $(temp).children("a").text(items[i].no);
 
                 $("#aolist").append(temp);
@@ -21,38 +22,29 @@ jQuery(function($){
 
             $("#aolist li").click(function(a){
                 var no= $(a.currentTarget).children("a").text().trim();
-                var date="2016-12-19";
-                var geturl=baseUrl+"dayvalue?no="+no+"&date="+date;
+                var geturl=baseUrl+"dayvalue?no="+no+"&date="+datestr;
 
                 $.get(geturl,function(data,status){
                     var myChart = echarts.init(document.getElementById('chart'));
-                    data=eval(data);
+                    data=JSON.parse(data);
                     var listy=[];
                     var listx=[];
-                    var maxy=-1;
-                    var miny=10000;
-                    $.each(data,function(d,a){
+                    $.each(data.data,function(d,a){
                         var date=new Date(a.time*1000);
                         //list.push([date.getHours()+':'+date.getMinutes(), a.price]);
                         listy.push(date.getHours()+':'+date.getMinutes());
                         listx.push(a.price);
-                        maxy=Math.max(maxy, a.price);
-                        miny=Math.min(miny, a.price);
                     });
+                    var price=data.lastPrice-data.ud;
+                    maxy=Math.max(Math.abs(data.max-price),Math.abs(data.min-price));
+                    miny=price-maxy;
 
                     option = {
                         tooltip : {
                             trigger: 'axis'
                         },
                         toolbox: {
-                            show : true,
-                            feature : {
-                                mark : {show: true},
-                                dataView : {show: true, readOnly: false},
-                                magicType : {show: true, type: ['line', 'bar', 'stack', 'tiled']},
-                                restore : {show: true},
-                                saveAsImage : {show: true}
-                            }
+                            show : false
                         },
                         calculable : true,
                         xAxis : [

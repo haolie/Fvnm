@@ -11,7 +11,7 @@ var path = require('path');
 var da=function(){}
 da.prototype.analyse=function(date,callback){
 
-    nohelper.getallnofromlocal(date,function(err,items){
+    dbsuport.getfaces({date:date},function(err,items){
         async.mapLimit(items,1,function(item,nocallback){
             dbsuport.getValueByDayNo({no:item.no,date:new Date(date) },function(err,result){
                 if(result==null||result==0){
@@ -32,14 +32,16 @@ da.prototype.analyse=function(date,callback){
                 }
 
                 var face=1;
-                if(max.time>min.time)face=2;
-                dbsuport.getcodeface(item.no,date,function(err,f){
-                    f.face=face;
-                    dbsuport.updatacodeface(f,function(err,uf){
+                item.per=item.ud/(item.lastPrice-item.ud);
+                if(max==min)face=4;
+                else if(max.time>min.time)face=2;
+
+                    item.face=face;
+                    dbsuport.updatacodeface(item,function(err,uf){
                         nocallback(null,null);
+                        console.log(item.no +" face:"+face);
                     })
 
-                })
             })
 
         },function(err,result){
@@ -47,6 +49,7 @@ da.prototype.analyse=function(date,callback){
                 var config= JSON.parse( bytesRead.toString());
                 config.lastAnalyse=date;
                 fs.writeFile(path.join(__dirname,"config.json"), JSON.stringify(config), function (err) {
+                    console.log(config.lastAnalyse);
                     if(callback){
                         callback(err);
                     }
@@ -69,12 +72,18 @@ da.prototype.checkdate=function(callback){
         if(config.lastAnalyse)
         lastDateStr=new Date(config.lastAnalyse);
 
-        fs.readdir( path.join(__dirname,"history"), function(err, stat) {
+        dbsuport.getfaces({no:"000001"},function(err,sh){
             var dates=[];
-            for(var i in stat){
-                if(lastDateStr==null)dates.push(stat[i]);
-                else if(new Date(stat[i])>lastDateStr){
-                    dates.push(stat[i]);
+            if(err||sh==null){
+                callback(null,dates);
+                return;
+            }
+
+            for(var i in sh){
+                if(lastDateStr==null)dates.push(sh[i].date);
+                else if(new Date(sh[i].date)>lastDateStr){
+                        if(err||sh==null) return;
+                        dates.push(sh[i].date);
                 }
             }
             callback(null,dates);
@@ -95,7 +104,11 @@ da.prototype.startworker=function(){
             return;
         }
 
-        async.map(date,module.exports.analyse,function(err,result){
+        for (var i in date){
+            console.log(date[i]);
+        }
+
+        async.mapLimit(date,1,module.exports.analyse,function(err,result){
             module.exports.working=false;
         })
     })
@@ -105,3 +118,4 @@ da.prototype.startworker=function(){
 
 module.exports=new da();
 module.exports.startworker();
+setInterval(module.exports.startworker,3600000);

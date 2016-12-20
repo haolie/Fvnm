@@ -15,6 +15,9 @@ vm.prototype.ondatefacequery=function(req,res,query){
         res.end("not find date error");
         return
     }
+    var item={date:query.query.date};
+    if(query.query.face) item.face=query.query.face;
+    if(query.query.per!=undefined) item.per={$lte:query.query.per};
 
     dbsuport.getfaces({date:query.query.date,face:2},function(err,faces){
 
@@ -34,16 +37,12 @@ vm.prototype.ondayvalueQuery=function(req,res,query){
     var item={};
     item.no=query.no;
     item.date=new Date(query.date)
+
     dbsuport.getcodeface(query.no,query.date,function(err,face){
         dbsuport.getValueByDayNo(item,function(er,result){
-            var  o= {
-                max:face.max,
-                min:face.min,
-                ud:face.ud,
-                data:result
-            }
+            face.data=result;
             res.writeHead(200, {'Content-Type': 'text/plain'});
-            res.end(JSON.stringify(o));
+            res.end(JSON.stringify(face));
         })
     });
 

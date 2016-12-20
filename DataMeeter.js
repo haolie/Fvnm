@@ -218,6 +218,7 @@ DataMeeter.prototype.getAllCodeValues=function(codes){
         },function(err,r){
             global.curCodes=null;
         });
+        module.exports.isWorking=false;
 
     })
 }
