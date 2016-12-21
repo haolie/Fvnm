@@ -16,8 +16,8 @@ vm.prototype.ondatefacequery=function(req,res,query){
         return
     }
     var item={date:query.query.date};
-    if(query.query.face) item.face=query.query.face;
-    if(query.query.per!=undefined) item.per={$lte:query.query.per};
+    if(query.query.face) item.face= parseInt(query.query.face);
+    if(query.query.per!=undefined) item.per={$lte:parseFloat(query.query.per) };
 
     dbsuport.getfaces({date:query.query.date,face:2},function(err,faces){
 

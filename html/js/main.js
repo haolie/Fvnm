@@ -2,7 +2,7 @@
  * Created by LYH on 2016/12/20.
  */
 
-var baseUrl="http://localhost:8080/node/";
+var baseUrl="http://58.20.245.98:8686/node/";
 jQuery(function($){
 
 
@@ -16,8 +16,9 @@ jQuery(function($){
                 var temp =  $('<li style="cursor: pointer"><a ><i class="menu-icon fa fa-caret-right"></i></a> <b class="arrow"></b></li>');
                 $(temp).children("a").text(items[i].no);
 
-                $("#aolist").append(temp);
+                $("#aolist").append(temp[0]);
                 if(i>120) break;
+
             }
 
             $("#aolist li").click(function(a){
@@ -38,6 +39,7 @@ jQuery(function($){
                     var price=data.lastPrice-data.ud;
                     maxy=Math.max(Math.abs(data.max-price),Math.abs(data.min-price));
                     miny=price-maxy;
+                    maxy=price+maxy;
 
                     option = {
                         tooltip : {
@@ -66,7 +68,12 @@ jQuery(function($){
                                 name:'搜索引擎',
                                 type:'line',
                                 stack: '总量',
-                                data:listx
+                                data:listx,
+                                markLine : {
+                                    data : [
+                                        {value: price}
+                                    ]
+                                }
                             }
                         ]
                     };
