@@ -2,15 +2,19 @@
  * Created by LYH on 2016/12/20.
  */
 
-var baseUrl="http://58.20.245.98:8686/node/";
+var baseUrl="http://localhost:8080/node/";
 jQuery(function($){
 
+    $("#chart").ready(function(){
+        //alert($("#chart").width())
+        $("#chart").height(Math.min($(document).height()-162,$("#chart").width()));
+    })
 
     $( "#btncodeface").click(function(a,b){
         var date=$("#datepicker").datepicker("getDate");
         $("#aolist").html("");
         var datestr=date.getFullYear()+"-"+(date.getMonth()+1)+"-"+date.getDate();
-        $.get(baseUrl+ "dateface?face=2&per=3&date="+datestr,function(data,status){
+        $.get(baseUrl+ "dateface?face=2&per=0.03&date="+datestr,function(data,status){
             var items= eval(data);
             for(var i in items){
                 var temp =  $('<li style="cursor: pointer"><a ><i class="menu-icon fa fa-caret-right"></i></a> <b class="arrow"></b></li>');
@@ -18,7 +22,6 @@ jQuery(function($){
 
                 $("#aolist").append(temp[0]);
                 if(i>120) break;
-
             }
 
             $("#aolist li").click(function(a){
@@ -71,7 +74,7 @@ jQuery(function($){
                                 data:listx,
                                 markLine : {
                                     data : [
-                                        {value: price}
+                                        { yAxis: price }
                                     ]
                                 }
                             }
