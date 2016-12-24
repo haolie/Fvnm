@@ -19,7 +19,7 @@ vm.prototype.startDataMeeter=function(){
 
 vm.prototype.timeConsole=function(str){
     var date=new Date();
-    console.log(date.getHours()+":"+date.getMinutes()+"  "+str);
+    console.log(date.getHours()+":"+date.getMinutes()+":"+date.getSeconds()+":"+date.getMilliseconds()+"  "+str);
 }
 
 vm.prototype.startDataServer=function(){

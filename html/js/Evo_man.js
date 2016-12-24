@@ -3,7 +3,7 @@
  */
 jQuery(function($){
     var baseUrl="../node/";
-    var mcar=function(){};
+   var mcar=function(){};
     mcar.prototype.init=function(){
         $("#chart").ready(function(){
             //alert($("#chart").width()) tab_charts
@@ -24,7 +24,7 @@ jQuery(function($){
 
         $("#btnper").click(function(){
             if(curindex<=0) return;
-            current.setcurCode(Number(curindex)-1,true);
+            current.queryDataByDateNo(Number(curindex)-1,true);
 
         })
 
@@ -32,7 +32,7 @@ jQuery(function($){
             if(curindex<0) return;
             if(curindex==allitems.length-1)return;
 
-            current.setcurCode(Number(curindex) +1);
+            current.queryDataByDateNo(Number(curindex) +1);
         })
 
         $( "#btncodeface").click(function(a,b){
@@ -49,7 +49,7 @@ jQuery(function($){
                     if(i>120) break;
                 }
 
-                current.setcurCode(0);
+                current.queryDataByDateNo(0);
 
 
                 $("#aolist li").click(function(a){
@@ -72,13 +72,14 @@ jQuery(function($){
 
     var allitems=null;
     var curindex=-1;
-    mcar.prototype.queryDataByDateNo=function(date,no){
-
-        var geturl=baseUrl+"dayvalue?no="+no+"&date="+date;
+    mcar.prototype.queryDataByDateNo=function(index,gizp){
+        curindex=index;
+        var no=allitems[index].no;
+        var geturl=baseUrl+"dayvalue?no="+no+"&date="+allitems[index].date;
         $("#titleno").text(no);
 
         $.get(geturl,function(data,status){
-            var myChart = echarts.init(document.getElementById("item_"+date));
+            var myChart = echarts.init(document.getElementById('chart'));
             data=JSON.parse(data);
             var listy=[];
             var listx=[];
@@ -134,39 +135,6 @@ jQuery(function($){
 
             myChart.setOption(option);
         })
-    }
-
-    mcar.prototype.currentno="";
-    mcar.prototype.date="";
-    mcar.prototype.setcurCode=function(index){
-        curindex=index;
-        current.queryDataByDateNo(current.currentno,current.date);
-    }
-
-    mcar.prototype.settable=function(code,date){
-        $("#tab_charts").children("ul").html('');
-        $("#tab_charts").children(".tab-content").html('');
-
-        current.insertTabItem(date);
-        var geturl=baseUrl+"afterdays?no="+code+"&date="+date+"$count=5";
-        $get(geturl,function(data,status){
-            dates=JSON.parse(data);
-            for(var i in dates){
-                current.insertTabItem(dates[1]);
-            }
-        })
-
-    }
-
-    mcar.prototype.insertTabItem=function(date){
-        var $headhtml=$('<li><a data-toggle="tab" aria-expanded="false"><i class="pink ace-icon fa fa-tachometer bigger-110"></i></a></li>');
-        $headhtml.children("a").href("#item_"+date).text(date);
-
-        var $contenthtml=$(' <div class="tab-pane">');
-        $contenthtml.id("#item_"+date);
-
-        $("#tab_charts").children("ul").append($headhtml);
-        $("#tab_charts").children(".tab-content").append($contenthtml);
     }
 
     var current=new mcar();
