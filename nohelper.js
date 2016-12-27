@@ -62,7 +62,14 @@ nohelper.prototype.getno=function(index,callback){
                 var codestr=temp.result[i][0].toString();
                 codestr=codestr.replace(".sz","");
                 codestr=codestr.replace(".sh","");
-                result.push({no:codestr,price:temp.result[i][2],ud:temp.result[i][4]});
+                result.push({no:codestr,
+                    price:Number(temp.result[i][2])  ,//现价
+                    dde:Number(temp.result[i][4])  ,//dde 尽量
+                    dde_b:Number(temp.result[i][6])  ,//dde 买入（w）
+                    dde_s:Number(temp.result[i][7])  ,//dde 卖出（w）
+                    mforce:Number(temp.result[i][8]) ,//主力流向（w）
+                    ud:Number(temp.result[i][5]) });//涨跌 （元）
+
             }
             if(callback)(callback(null,result));
         })
@@ -70,10 +77,8 @@ nohelper.prototype.getno=function(index,callback){
 }
 
 nohelper.prototype.getToken=function(callback){
-    var date=new Date();
-    var datastr=date.getFullYear()+'.'+date.getMonth()+"."+date.getDate();
     //var url="http://www.iwencai.com/stockpick/search?typed=1&preParams=&ts=1&f=1&qs=result_rewrite&selfsectsn=&querytype=&searchfilter=&tid=stockpick&w=%E5%87%80%E9%87%8F";
-    var url="http://www.iwencai.com/stockpick/search?typed=1&preParams=&ts=1&f=1&qs=result_rewrite&selfsectsn=&querytype=&searchfilter=&tid=stockpick&w=%E6%B6%A8%E8%B7%8C";
+    var url="http://www.iwencai.com/stockpick/search?typed=1&preParams=&ts=1&f=1&qs=result_rewrite&selfsectsn=&querytype=&searchfilter=&tid=stockpick&w=dde+%E6%B6%A8%E8%B7%8C";
     //url+=datastr;
    // url+="涨跌";
    http.get(url,function(resp){
@@ -87,9 +92,14 @@ nohelper.prototype.getToken=function(callback){
            var buf=Buffer.concat(chunks, length);
            var str= buf.toString();
 
+
+
            str=str.substring(str.indexOf("var allResult ="));
            str=str.substring(str.indexOf("{"),str.indexOf(";\n"));
            var temp=JSON.parse(str);
+
+
+
            if(callback)callback(null,temp);
        })
    })

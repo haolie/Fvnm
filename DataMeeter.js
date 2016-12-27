@@ -102,8 +102,6 @@ DataMeeter.prototype.getValuesByNo=function(item,allcallback){
                         return;
                     }
 
-                    var date=new Date();
-
                     for(var i=0;i<temp.zhubi_list.length;i++){
                         item.data.set(temp.zhubi_list[i].date.sec, {
                             _id:item.no+"_"+temp.zhubi_list[i].date.sec,
@@ -138,12 +136,10 @@ DataMeeter.prototype.getValuesByNo=function(item,allcallback){
                     module.exports.console(item.no+ ' 保存成功')
                 }
                 if(allvalues.length){
-                    var date=new Date();
-                    var datastr=date.getFullYear()+"-"+(date.getMonth()+1)+"-"+date.getDate();
                     var face={
-                        _id:item.no+"_"+datastr,
+                        _id:item.no+"_"+global.datestr,
                         no:item.no,
-                        date:datastr,
+                        date:global.datestr,
                         min:item.min,
                         max:item.max,
                         ud:item.tag.ud,
@@ -198,7 +194,7 @@ DataMeeter.prototype.getAllCodeValues=function(codes){
 
     async.mapLimit(list,1,module.exports.getValuesByNo,function(err,results){
         var date=new Date();
-        module.exports.console(date.getMonth()+""+date.getDate()+""+"data save succeed")
+        module.exports.console(global.datestr+" data save succeed")
 
         var ms=new Date().valueOf()-starttime.valueOf();
         var m=0;
@@ -210,11 +206,10 @@ DataMeeter.prototype.getAllCodeValues=function(codes){
 
         module.exports.console("耗时 "+m+":"+s+";"+ms);
 
-        var datastr=date.getFullYear()+"-"+(date.getMonth()+1)+"-"+date.getDate();
         dbsuport.updatacodeface({
-            _id:"000001_"+datastr,
+            _id:"000001_"+global.datestr,
             no:"000001",
-            date:datastr
+            date:global.datestr
         },function(err,r){
             global.curCodes=null;
         });
