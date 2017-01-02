@@ -7,6 +7,7 @@ var async=require("async");
 var hashmap=require("hashmap");
 var nohelper = require('./nohelper.js');
 var dbsuport = require('./MGDBSuport.js');
+var sqlsuport = require('./MYSQLDBSuport.js');
 var nohelper = require('./nohelper.js');
 //var StringDecoder = require('string_decoder').StringDecoder;
 var  process = require('process');
@@ -16,33 +17,18 @@ var transfer=function(){}
 
 transfer.prototype.start=function(){
 
-    if(cluster.isMaster){
+    dbsuport.getfaces({date:'2016-12-30'},function(err,codes){
+        async.mapLimit(codes,1,function(code,mpcallback){
+            dbsuport.getValueByDayNo({date:new Date(code.date),no:code.no},function(err,items){
+                sqlsuport.saveTimePrice(items,function(err,el){
+                    mpcallback(err,1);
+                })
+            })
+        },function(err,rs){
 
-
-
-
-        return;
-    }
-
-    var parm=process.argv[process.argv.length-1].toString();
-
-    if(parm=="-s"){
-        nohelper.getallno(function(err,allno){
-            dbsuport.saveCodes(allno,function(err,count){
-                console.log(count);
-
-                dbsuport.getAllCodes(function(err,codes){
-                    module.exports.transCode(codes);
-                });
-            });
         })
-    }
-    else
-    {
-        dbsuport.getAllCodes(function(err,codes){
-            module.exports.transCode(codes);
-        });
-    }
+    })
+
 }
 
 transfer.prototype.transCode=function(codes,callback){
