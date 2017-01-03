@@ -18,8 +18,9 @@ suporter.prototype.getConnction=function(callback){
         module.exports.connction=mysql.createConnection({
             host:'localhost',
             user:'mysql',
-            password:'123456',
-            database:'finance'
+            //password:'123456',
+            database:'finance',
+            useConnectionPooling: true
         });
         module.exports.connction.connect(function(a,b){
             callback(null,module.exports.connction);
@@ -33,7 +34,7 @@ suporter.prototype.getInsertStr=function(item){
     return '(' +
         (1000000+Number(item.no))+','+
         '"'+tool.convertToTIMESTAMP( item.time)+'"' +','+
-        item.price+','+
+        (item.price*100)+','+
         item.trade_type+','+
         (item.turnover_inc/100)+','+
         (item.volume/100)+
@@ -181,26 +182,34 @@ suporter.prototype.getfaces=function(item,callback){
 
     module.exports.getConnction(function(err, conn) {
         var str="SELECT * FROM codeface where ";
-        if(item.no)
-            '_no='+(1000000+Number(item.no))+';';
-        if(item.date)
-            '_date="'+item.date+'"';
+        if(item.date&&item.no){
+            str+="_no="+item.no;
+            str+=" and _date='"+item.date+"';";
+        }
+        else if(item.no){
+            str+="_no="+item.no;
+        }
+        else if (item.date){
+            str+="_date='"+item.date+"';";
+        }
+
 
         conn.query(str,function(err,results){
             var items=[];
             if(results&&results.length)
             for(var i in results){
                 items.push({
-                    no:results[i][0],
-                    date:results[i][1],
-                    min:results[i][2],
-                    max:results[i][3],
-                    ud:results[i][4],
-                    lastprice:results[i][5],
-                    face:results[i][6],
-                    dde_b:results[i][7],
-                    dde_s:results[i][8],
-                    mainforce:results[i][9],
+                    no:results[i]._no,
+                    date:results[i]._date,
+                    min:results[i]._min,
+                    max:results[i]._max,
+                    ud:results[i].ud,
+                    lastprice:results[i].lastprice,
+                    face:results[i].face,
+                    dde_b:results[i].dde_b,
+                    dde_s:results[i].dde_s,
+                    mainforce:results[i].mainforce,
+                    state:results[i]._state,
                 });
             }
 
@@ -227,8 +236,43 @@ suporter.prototype.getValueSql=function(o,str,_default){
     return temp;
 }
 
-suporter.prototype.updatacodeface=function(item,callback){
+suporter.prototype.savecodefaces=function(items,callback){
+    if(!(items instanceof Array)) items=[items];
+    var lists=tool.getSpiedList(items,600);
 
+    module.exports.getConnction(function(err,conn){
+        async.mapLimit(lists,1,function(list,mapcallback){
+           var str="INSERT INTO codeface(_no,_date,_min,_max,ud,lastprice,face,dde,dde_b,dde_s,mainforce,_state)" +
+                " VALUES" ;
+            for (var i in list){
+                item=list[i];
+                str+='(' +
+                    (Number(item.no) +1000000)+','+
+                    '"'+ item.date+'"'+','+
+                    (module.exports.getValueSql(item,'min')*100)+','+
+                    (module.exports.getValueSql(item,'max')*100)+','+
+                    (module.exports.getValueSql(item,'ud')*100) +','+
+                    (module.exports.getValueSql(item,'lastprice')*100) +','+
+                    module.exports.getValueSql(item,'face') +','+
+                    module.exports.getValueSql(item,'dde') +','+
+                    module.exports.getValueSql(item,'dde_b') +','+
+                    module.exports.getValueSql(item,'dde_s') +','+
+                    module.exports.getValueSql(item,'mainforce') +','+
+                    module.exports.getValueSql(item,'state') +')';
+                if(i==list.length-1) str+=';';
+                else str+=',';
+            }
+            conn.query(str,function(err,result){
+                mapcallback(err,str);
+            })
+        },function(err,result){
+            if(callback)callback(err,result);
+        });
+    });
+
+}
+
+suporter.prototype.updatacodeface=function(item,callback){
     module.exports.getcodeface(item.no,item.date,function(err,face){
         module.exports.getConnction(function(err,conn){
             var str='';
@@ -236,28 +280,12 @@ suporter.prototype.updatacodeface=function(item,callback){
 
             }
             else {
-                var temp='';
-                str="INSERT INTO codeface(_no,_date,_min,_max,ud,lastprice,face,dde,dde_b,dde_s,mainforce)" +
-                    " VALUES(" +
-                    (Number(item.no) +1000000)+','+
-                    '"'+ item.date+'"'+','+
-                    module.exports.getValueSql(item,'min')+','+
-                    module.exports.getValueSql(item,'max')+','+
-                module.exports.getValueSql(item,'ud') +','+
-                module.exports.getValueSql(item,'lastprice') +','+
-                module.exports.getValueSql(item,'face') +','+
-                module.exports.getValueSql(item,'dde') +','+
-                module.exports.getValueSql(item,'dde_b') +','+
-                module.exports.getValueSql(item,'dde_s') +','+
-                module.exports.getValueSql(item,'mainforce') +');';
-                conn.query(str,function(err,result){
-                  if(callback) callback(err,str);
-                })
-
+                module.exports.savecodefaces(item,callback);
             }
         })
 
     });
+
 }
 
 

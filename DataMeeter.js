@@ -46,7 +46,7 @@ DataMeeter.prototype.checkValueDate=function(callback){
     //callback(null, false);
     //return false;
     var date=new Date();
-    if(date.getHours()<3){
+    if(date.getHours()<0){
         callback(null,true);
         return;
     }

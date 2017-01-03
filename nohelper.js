@@ -7,6 +7,7 @@ var percount=70;
 var token="";
 var fs= require('fs');
 var path = require('path');
+var dbsuport = require('./MYSQLDBSuport.js');
 
 var nohelper=function Nohelper(){}
 
@@ -63,11 +64,13 @@ nohelper.prototype.getno=function(index,callback){
                 codestr=codestr.replace(".sz","");
                 codestr=codestr.replace(".sh","");
                 result.push({no:codestr,
-                    price:Number(temp.result[i][2])  ,//现价
+                    date:global.datestr,
+                    state:0,
+                    lastprice:Number(temp.result[i][2])  ,//现价
                     dde:Number(temp.result[i][4])  ,//dde 尽量
                     dde_b:Number(temp.result[i][6])  ,//dde 买入（w）
                     dde_s:Number(temp.result[i][7])  ,//dde 卖出（w）
-                    mforce:Number(temp.result[i][8]) ,//主力流向（w）
+                    mainforce:Number(temp.result[i][8]) ,//主力流向（w）
                     ud:Number(temp.result[i][5]) });//涨跌 （元）
 
             }
@@ -114,6 +117,8 @@ nohelper.prototype.savenofile=function(items,callback){
 
 }
 
+
+
 nohelper.prototype.getallnofromlocal=function(datestr, callback){
     fs.exists(path.join(__dirname, 'history/'+datestr),function(exist){
         if(exist){
@@ -129,15 +134,16 @@ nohelper.prototype.getallnofromlocal=function(datestr, callback){
 
 nohelper.prototype.getallno=function(getallnocallback){
 
-    module.exports.getallnofromlocal(global.datestr,function(err,items){
-        if(err==null)
+    dbsuport.getfaces({date: global.datestr},function(err,items){
+        if(err==null&&items&&items.length>0)
             getallnocallback(err,items);
         else
         module.exports.getallnofromweb(function(err,items){
             if(err)getallnocallback("获取出错",null);
             else{
-                module.exports.savenofile(items)
-                getallnocallback(null,items);
+                dbsuport.savecodefaces(items,function(err,result){
+                    getallnocallback(null,items);
+                })
             }
         })
     })
