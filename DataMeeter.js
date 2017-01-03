@@ -79,10 +79,20 @@ DataMeeter.prototype.checkValueDate=function(callback){
 
 DataMeeter.prototype.getValuesByNo=function(item,allcallback){
 
+    var index=0;
+    for(var i in global.curCodes){
+        if(global.curCodes[i].no==item.no){
+            index=i;
+            break;
+        }
+    }
+
      if(item.tag.save){
             allcallback(null,item);
+           module.exports.console("index:"+index+","+ item.no+" has saved");
             return;
         }
+
         var allurls=  module.exports.getUrlsByCode(item.no);
 
         async.mapLimit(allurls,8,function(codeurl,callback){
@@ -122,7 +132,7 @@ DataMeeter.prototype.getValuesByNo=function(item,allcallback){
                         try {
                             var temp=JSON.parse(decoded.toString().toLowerCase());
                         }catch(er) {
-                            module.exports.console(item.no+"  数据获取失败");
+                            module.exports.console("index:"+index+","+ item.no+" 数据获取失败");
                             callback(1,0);
                             return;
                         }
@@ -142,26 +152,31 @@ DataMeeter.prototype.getValuesByNo=function(item,allcallback){
                             item.max=Math.max(item.max,temp.zhubi_list[i].price);
                         }
 
-                        callback(0,temp.zhubi_list.length);
+                        callback(0,1);
 
                     });
                 });
             }).on("error",function(a,b){
-               callback(1,null);
+               callback(1,0);
                //module.exports.console("请求出错 ");
-               module.exports.console(item.no+"  请求出错");
+               module.exports.console("index:"+index+","+ item.no+" 请求出错");
             }).on('timeout',function(e){
 
                rquest.abort();
               // callback(1,null);
-               module.exports.console("请求超时");
+               module.exports.console("index:"+index+","+ item.no+" 请求超时");
            });
             rquest.setTimeout(10000,function(a,b){
 
            });
         },function(err,results){
-            if(err){
-                module.exports.console(item.no+ ' 保存失败')
+
+            var su=true;
+            if(err)su=false;
+            else for (i in results)su&=results[i];
+
+            if(!su){
+                module.exports.console("index:"+index+","+ item.no+" 保存失败");
                 allcallback(0,false);
                 return;
             }
@@ -174,10 +189,10 @@ DataMeeter.prototype.getValuesByNo=function(item,allcallback){
             var allvalues=item.data.values();
             dbsuport.saveTimePrice(allvalues,function(err,result){
                 if(err){
-                    module.exports.console(item.no+ ' 保存失败')
+                    module.exports.console("index:"+index+","+ item.no+" 保存失败");
                 }
                 else {
-                    module.exports.console(item.no+ ' 保存成功')
+                    module.exports.console("index:"+index+","+ item.no+" 保存成功;" +allvalues.length);
                 }
                 if(allvalues.length){
                     var face={
@@ -193,12 +208,8 @@ DataMeeter.prototype.getValuesByNo=function(item,allcallback){
                     dbsuport.updatacodeface(face);
                 }
 
-                for(var i in global.curCodes){
-                    if(global.curCodes[i].no==item.no){
-                        global.curCodes[i].save=true;
-                        module.exports.console(i+"/"+global.curCodes.length);
-                    }
-                }
+                global.curCodes[index].save=true;
+                module.exports.console(index+"/"+global.curCodes.length);
 
                 item.data=null;
                 allcallback(0,true);

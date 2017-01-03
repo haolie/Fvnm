@@ -16,7 +16,7 @@ suporter.prototype.connction=null;
 suporter.prototype.getConnction=function(callback){
     if(module.exports.connction==null){
         module.exports.connction=mysql.createConnection({
-            host:'192.168.1.168',
+            host:'localhost',
             user:'mysql',
             password:'123456',
             database:'finance'
@@ -35,8 +35,8 @@ suporter.prototype.getInsertStr=function(item){
         '"'+tool.convertToTIMESTAMP( item.time)+'"' +','+
         item.price+','+
         item.trade_type+','+
-        item.turnover_inc+','+
-        item.volume+
+        (item.turnover_inc/100)+','+
+        (item.volume/100)+
         ')';
 }
 
@@ -47,7 +47,7 @@ suporter.prototype.saveTimePrice=function(timevalues,allcallback){
         return;
     }
 
-    var lists=tool.getSpiedList(timevalues,300);
+    var lists=tool.getSpiedList(timevalues,600);
 
     module.exports.getConnction(function(err,conn){
         if(err==null){
@@ -180,10 +180,15 @@ suporter.prototype.transData=function(code,callback){
 suporter.prototype.getfaces=function(item,callback){
 
     module.exports.getConnction(function(err, conn) {
-        var str="SELECT * FROM codeface where "+
-            'no='+(1000000+Number(item.no))+';';
+        var str="SELECT * FROM codeface where ";
+        if(item.no)
+            '_no='+(1000000+Number(item.no))+';';
+        if(item.date)
+            '_date="'+item.date+'"';
+
         conn.query(str,function(err,results){
             var items=[];
+            if(results&&results.length)
             for(var i in results){
                 items.push({
                     no:results[i][0],
@@ -215,9 +220,11 @@ suporter.prototype.getcodeface=function(code,date,callback){
 }
 
 suporter.prototype.getValueSql=function(o,str,_default){
-    if(_default=undefined)_default=0;
-    if(o[str]==undefined) return _default;
-    return o[str];
+    if(_default==undefined)_default=0;
+    var temp=o[str];
+    if(temp==undefined)
+        return _default;
+    return temp;
 }
 
 suporter.prototype.updatacodeface=function(item,callback){
@@ -230,9 +237,9 @@ suporter.prototype.updatacodeface=function(item,callback){
             }
             else {
                 var temp='';
-                str="INSERT INTO time_price(_no,_date,_min,_max,ud,lastprice,face,dde,dde_b,dde_s,mainforce)" +
+                str="INSERT INTO codeface(_no,_date,_min,_max,ud,lastprice,face,dde,dde_b,dde_s,mainforce)" +
                     " VALUES(" +
-                    (item.no+1000000)+','+
+                    (Number(item.no) +1000000)+','+
                     '"'+ item.date+'"'+','+
                     module.exports.getValueSql(item,'min')+','+
                     module.exports.getValueSql(item,'max')+','+
