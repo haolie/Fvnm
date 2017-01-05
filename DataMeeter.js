@@ -199,20 +199,27 @@ DataMeeter.prototype.getValuesByNo=function(item,allcallback){
                         _id:item.no+"_"+global.datestr,
                         no:item.no,
                         date:global.datestr,
-                        min:item.min,
-                        max:item.max,
-                        ud:item.tag.ud,
-                        lastPrice:item.tag.price
+                        _min:Math.floor(item.min*100),
+                        _max:Math.floor(item.max*100) ,
+                        _state:1
                     };
 
-                    //dbsuport.updatacodeface(face);
+                    dbsuport.updatacodeface(face,function(err,s){
+                        global.curCodes[index].save=true;
+                        module.exports.console(index+"/"+global.curCodes.length);
+
+                        item.data=null;
+                        allcallback(0,true);
+                    });
+                }
+                else {
+                    global.curCodes[index].save=true;
+                    module.exports.console(index+"/"+global.curCodes.length);
+
+                    item.data=null;
+                    allcallback(0,true);
                 }
 
-                global.curCodes[index].save=true;
-                module.exports.console(index+"/"+global.curCodes.length);
-
-                item.data=null;
-                allcallback(0,true);
             });
         });
 }

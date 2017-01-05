@@ -18,7 +18,7 @@ suporter.prototype.getConnction=function(callback){
         module.exports.connction=mysql.createConnection({
             host:'localhost',
             user:'mysql',
-            password:'123456',
+            //password:'123456',
             database:'finance',
             useConnectionPooling: true
         });
@@ -146,12 +146,16 @@ suporter.prototype.getfaces=function(item,callback){
 
     module.exports.getConnction(function(err, conn) {
         var str="SELECT * FROM codeface where ";
+        var tempno;
         if(item.date&&item.no){
-            str+="_no="+item.no;
+            var tempno=Number(item.no);
+            if(tempno<1000000)tempno+1000000;
+            str+="_no="+tempno;
             str+=" and _date='"+item.date+"';";
         }
         else if(item.no){
-            str+="_no="+item.no;
+            if(tempno<1000000)tempno+1000000;
+            str+="_no="+tempno;
         }
         else if (item.date){
             str+="_date='"+item.date+"';";
@@ -239,9 +243,25 @@ suporter.prototype.savecodefaces=function(items,callback){
 suporter.prototype.updatacodeface=function(item,callback){
     module.exports.getcodeface(item.no,item.date,function(err,face){
         module.exports.getConnction(function(err,conn){
-            var str='';
-            if(face){
 
+            if(face){
+                var faids=["_state","_min","_max","face","dde","dde_s","dde_b","ud","mainforce","lastprice"];
+                var str="";
+                for (var i in faids){
+                    if(item[faids[i]]==undefined) continue;
+
+                    if(str.length>0) str+=",";
+                    if(faids[i]=="date"){
+
+                    }
+                    else
+                    str+=faids[i]+"="+item[faids[i]];
+                }
+
+                var tmno=Number(item.no);if(tmno<1000000)tmno+1000000;
+                str="update codeface set "+str+" where _no="+tmno+" and _date='"+item.date+"';";
+                conn.query(str,function(err,r){if(callback)callback(err,r)
+                })
             }
             else {
                 module.exports.savecodefaces(item,callback);
