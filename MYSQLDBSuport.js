@@ -18,7 +18,7 @@ suporter.prototype.getConnction=function(callback){
         module.exports.connction=mysql.createConnection({
             host:'localhost',
             user:'mysql',
-            //password:'123456',
+            password:'123456',
             database:'finance',
             useConnectionPooling: true
         });
@@ -39,6 +39,15 @@ suporter.prototype.getInsertStr=function(item){
         (item.turnover_inc/100)+','+
         (item.volume/100)+
         ')';
+}
+
+suporter.prototype.deletebyno=function(no,callback){
+    module.exports.getConnction(function(err,conn){
+        var str='delete from time_price where no='+no;
+        conn.query(str,function(err,result){
+            callback(err,result);
+        })
+    })
 }
 
 suporter.prototype.saveTimePrice=function(timevalues,allcallback){
@@ -76,34 +85,37 @@ suporter.prototype.saveTimePrice=function(timevalues,allcallback){
 
 
 suporter.prototype.getValueByDayNo=function(item,callback){
-    item.date.setHours(0);
-    item.date.setMinutes(0);
-    item.date.setMilliseconds(0);
-    var filter={
-        "no":item.no,
-        //"time":{$gt:item.date.getTime(),$lte: item.date.getTime() + 1 * 24 * 60 * 60 * 1000}
-        "time":{$gt:item.date.getTime()/1000,$lte: item.date.getTime()/1000 + 1 * 24 * 60 * 60 }
-    }
 
-    MongoClient.connect(dburl, function(err, db) {
+    module.exports.getConnction(function(err,conn){
+        var no=Number( item.no);if(no<1000000)no+=1000000;
+        var start=item.date.getFullYear()+'-'+(item.date.getMonth()+1)+'-'+item.getDate()+" 00:00:01";
+        var end=item.date.getFullYear()+'-'+(item.date.getMonth()+1)+'-'+(item.getDate()+1)+" 00:00:01";
+        var str='select * from time_price where no='+no +' and time>"'+start+'" and time<"'+end+'";';
+        conn.query(str,function(err,result){
+            var items=[];
+            if(result&&result.length>0){
+                for(var i in result){
+                    items.push({
+                        no:result[i].no-1000000,
+                        time:result[i].time,
+                        price:result[i].price/100,
+                        trade_type:result[i].trade_type,
+                        turnover_inc:result[i].turnover_inc*100,
+                        volume:result[i].volume*100
+                    })
+                }
+            }
 
-
-        if(err){
-            callback(err,0);
-        }
-        else {
-            db.collection(time_price).find(filter).toArray(function(err,r){
-                db.close();
-                callback(err,r);
-            })
-
-        }
-
+            callback(err,items);
+        });
     });
-
 }
 
 suporter.prototype.checkCount=function(item,callback){
+    module.exports.getConnction(function(err,conn){
+
+    });
+
     MongoClient.connect(dburl, function(err, db) {
         var filter={
             "no":item.no,
@@ -122,54 +134,6 @@ suporter.prototype.checkCount=function(item,callback){
             db.collection("time_price").find(filter).count(callback)
         }
         db.close();
-    });
-}
-
-suporter.prototype.saveCodes=function(codes,callback){
-    MongoClient.connect(dburl, function(err, db) {
-        var codetable=db.collection("codelist");
-
-        codetable.removeMany({},function(err,remove){
-            list=module.exports.getSpiedList(codes,888,0,function(code){return{no:code}});
-
-            async.mapSeries(list,function(item,call){
-                codetable.insertMany(item,call)
-            },function(err,result){
-                db.close();
-               if(callback) callback(null,codes.length);
-            });
-        });
-
-    });
-}
-
-suporter.prototype.getAllCodes=function(callback){
-    MongoClient.connect(dburl, function(err, db) {
-        var codetable=db.collection("codelist");
-
-        codetable.find().toArray(function(err,result){
-
-            var codes=[];
-            for(var i=0;i<result.length;i++){
-                codes.push(result[i].no);
-            }
-
-            db.close();
-            callback(null,codes);
-        })
-
-    });
-}
-
-suporter.prototype.removeCodes=function(codes,callback){
-    MongoClient.connect(dburl, function(err, db) {
-        var codetable=db.collection("codelist");
-        async.mapSeries(codes,function(item,call){
-            codetable.removeOne({"no":item},call);
-        },function(err,result){
-            db.close();
-           if(callback) callback(err,result);
-        });
     });
 }
 
@@ -238,7 +202,7 @@ suporter.prototype.getValueSql=function(o,str,_default){
 
 suporter.prototype.savecodefaces=function(items,callback){
     if(!(items instanceof Array)) items=[items];
-    var lists=tool.getSpiedList(items,600);
+    var lists=tool.getSpiedList(items,300);
 
     module.exports.getConnction(function(err,conn){
         async.mapLimit(lists,1,function(list,mapcallback){

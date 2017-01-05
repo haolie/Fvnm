@@ -205,7 +205,7 @@ DataMeeter.prototype.getValuesByNo=function(item,allcallback){
                         lastPrice:item.tag.price
                     };
 
-                    dbsuport.updatacodeface(face);
+                    //dbsuport.updatacodeface(face);
                 }
 
                 global.curCodes[index].save=true;
@@ -318,16 +318,12 @@ DataMeeter.prototype.startwork=function(){
         if(global.curCodes==null){
             nohelper.getallno(function(err,allno){
                 global.curCodes=allno;
-                dbsuport.getfaces({date:global.datestr},function(err,result){
-                    if(result&&result.length>0){
-                        for(var i in result){
-                            for(var j in allno){
-                                if(result[i].no==allno[j].no)allno[j].save=true;
-                            }
-                        }
+                if(allno&&allno.length>0){
+                    for(var i in allno){
+                            if(allno[i].state)allno[i].save=true;
                     }
-                    module.exports.getAllCodeValues(allno);
-                })
+                }
+                module.exports.getAllCodeValues(allno);
 
             })
         }

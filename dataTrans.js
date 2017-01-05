@@ -57,5 +57,16 @@ transfer.prototype.transCode=function(codes,callback){
 
 }
 
+transfer.prototype.deleteall=function(){
+    nohelper.getallno(function(err,codes){
+        async.mapLimit(codes,1,function(code,mpcallback){
+            sqlsuport.deletebyno(Number(code.no)+1000000 ,mpcallback);
+        },function(err,result){
+
+        })
+    })
+}
+
 module.exports=new transfer();
-module.exports.start();
+module.exports.deleteall();
+
