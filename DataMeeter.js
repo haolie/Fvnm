@@ -20,6 +20,8 @@ var DataMeeter=function(){};
 
 DataMeeter.prototype.getUrlsByCode=function(code){
     //var httpurl="http://quotes.money.163.com/service/zhubi_ajax.html?"+"symbol="+code;
+    code=code.toString();
+    if(code.length>6)code=code.substr(1);
     var httpurl="/service/zhubi_ajax.html?"+"symbol="+code;
     var minutes=30;
     var funlist=[];
@@ -46,7 +48,7 @@ DataMeeter.prototype.checkValueDate=function(callback){
     //callback(null, false);
     //return false;
     var date=new Date();
-    if(date.getHours()<0){
+    if(date.getHours()<15){
         callback(null,true);
         return;
     }
@@ -281,6 +283,8 @@ DataMeeter.prototype.getAllCodeValues=function(codes){
                 global.curCodes=null;
             });
         }
+
+
         module.exports.isWorking=false;
 
     })
