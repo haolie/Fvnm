@@ -322,7 +322,6 @@ DataMeeter.prototype.startwork=function(){
         }
 
         module.exports.console("start data meet");
-        if(global.curCodes==null){
             nohelper.getallno(function(err,allno){
                 global.curCodes=allno;
                 if(allno&&allno.length>0){
@@ -333,10 +332,6 @@ DataMeeter.prototype.startwork=function(){
                 module.exports.getAllCodeValues(allno);
 
             })
-        }
-        else{
-            module.exports.getAllCodeValues(global.curCodes);
-        }
     });
 }
 
