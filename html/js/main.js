@@ -37,8 +37,10 @@ jQuery(function($){
 
         $( "#btncodeface").click(function(a,b){
             var date=$("#datepicker").datepicker("getDate");
+
             $("#aolist").html("");
             var datestr=date.getFullYear()+"-"+(date.getMonth()+1)+"-"+date.getDate();
+            current.date =datestr;
             $.get(baseUrl+ "dateface?face=2&per=0.03&date="+datestr,function(data,status){
                 var items= eval(data);
                 allitems=items;
@@ -56,7 +58,7 @@ jQuery(function($){
                     var no= $(a.currentTarget).children("a").text().trim();
                     for(var i in allitems){
                         if(allitems[i].no==no){
-                            querynodata(i);
+                            this.queryDataByDateNo(no,current.date);
                             break;
                         }
                     }
@@ -72,7 +74,7 @@ jQuery(function($){
 
     var allitems=null;
     var curindex=-1;
-    mcar.prototype.queryDataByDateNo=function(date,no){
+    mcar.prototype.queryDataByDateNo=function(no,date){
 
         var geturl=baseUrl+"dayvalue?no="+no+"&date="+date;
         $("#titleno").text(no);
@@ -140,7 +142,7 @@ jQuery(function($){
     mcar.prototype.date="";
     mcar.prototype.setcurCode=function(index){
         curindex=index;
-        current.queryDataByDateNo(current.currentno,current.date);
+        current.queryDataByDateNo(allitems[index].no ,current.date);
     }
 
     mcar.prototype.settable=function(code,date){

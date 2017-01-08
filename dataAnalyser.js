@@ -2,7 +2,7 @@
  * Created by LYH on 2016/12/20.
  */
 var nohelper = require('./nohelper.js');
-var dbsuport = require('./MGDBSuport.js');
+var dbsuport = require('./MYSQLDBSuport.js');
 var  process = require('process');
 var async=require("async");
 var fs= require('fs');
@@ -13,9 +13,13 @@ da.prototype.analyse=function(date,callback){
 
     dbsuport.getfaces({date:date},function(err,items){
         async.mapLimit(items,1,function(item,nocallback){
+            if(item.no==1000001||item.no==1){
+                nocallback(0,null);
+                return;
+            }
             dbsuport.getValueByDayNo({no:item.no,date:new Date(date) },function(err,result){
                 if(result==null||result==0){
-                    nocallback(1,null);
+                    nocallback(0,null);
                     return;
                 }
                 var min=null;
@@ -32,12 +36,12 @@ da.prototype.analyse=function(date,callback){
                 }
 
                 var face=1;
-                item.per=item.ud/(item.lastPrice-item.ud);
-                if(max==min)face=4;
+                item.per=item.ud/(item.lastprice-item.ud);
+                if(max.price==min.price)face=4;
                 else if(max.time>min.time)face=2;
 
                     item.face=face;
-                    dbsuport.updatacodeface(item,function(err,uf){
+                    dbsuport.updatacodeface({no:item.no,date:item.date,_min:min.price*100,_max:max.price*100,face:face,per:Math.floor(item.per*10000) },function(err,uf){
                         nocallback(null,null);
                         console.log(item.no +" face:"+face);
                     })
@@ -72,7 +76,7 @@ da.prototype.checkdate=function(callback){
         if(config.lastAnalyse)
         lastDateStr=new Date(config.lastAnalyse);
 
-        dbsuport.getfaces({no:"000001"},function(err,sh){
+        dbsuport.getfaces({no:000001},function(err,sh){
             var dates=[];
             if(err||sh==null){
                 callback(null,dates);

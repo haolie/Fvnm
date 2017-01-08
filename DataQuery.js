@@ -3,7 +3,8 @@
  */
 var http = require('http');
 var nohelper = require('./nohelper.js');
-var dbsuport = require('./MGDBSuport.js');
+//var dbsuport = require('./MGDBSuport.js');
+var dbsuport = require('./MYSQLDBSuport.js');
 var  process = require('process');
 var url=require("url");
 
@@ -19,7 +20,9 @@ vm.prototype.ondatefaceQuery=function(req,res,query){
     if(query.face) item.face= parseInt(query.face);
     if(query.per!=undefined) item.per={$lte:parseFloat(query.per) };
 
-    dbsuport.getfaces(item,function(err,faces){
+    var str="select * from codeface where _date='"+query.date+"' and per<"+query.per*10000+";";
+
+    dbsuport.getfacesbysql(str,function(err,faces){
 
         res.end(JSON.stringify(faces));
     })

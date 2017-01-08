@@ -18,7 +18,7 @@ suporter.prototype.getConnction=function(callback){
         module.exports.connction=mysql.createConnection({
             host:'localhost',
             user:'mysql',
-            //password:'123456',
+            password:'123456',
             database:'finance',
             useConnectionPooling: true
         });
@@ -31,8 +31,9 @@ suporter.prototype.getConnction=function(callback){
 }
 
 suporter.prototype.getInsertStr=function(item){
+    if(Number(item.no)<1000000 )item.no=Number(item.no)+1000000;
     return '(' +
-        (1000000+Number(item.no))+','+
+        Number(item.no)+','+
         '"'+tool.convertToTIMESTAMP( item.time)+'"' +','+
         (item.price*100)+','+
         item.trade_type+','+
@@ -85,18 +86,22 @@ suporter.prototype.saveTimePrice=function(timevalues,allcallback){
 
 
 suporter.prototype.getValueByDayNo=function(item,callback){
-
+    var date=item.date;
+    if(typeof (date)!='string')
+        date=date.toLocaleDateString();
+    date=new Date(date);
     module.exports.getConnction(function(err,conn){
         var no=Number( item.no);if(no<1000000)no+=1000000;
-        var start=item.date.getFullYear()+'-'+(item.date.getMonth()+1)+'-'+item.getDate()+" 00:00:01";
-        var end=item.date.getFullYear()+'-'+(item.date.getMonth()+1)+'-'+(item.getDate()+1)+" 00:00:01";
+        var start=date.toLocaleDateString();
+        date.add('d',1)
+        var end=date.toLocaleDateString();
         var str='select * from time_price where no='+no +' and time>"'+start+'" and time<"'+end+'";';
         conn.query(str,function(err,result){
             var items=[];
             if(result&&result.length>0){
                 for(var i in result){
                     items.push({
-                        no:result[i].no-1000000,
+                        no:result[i].no.toString().substring(1),
                         time:result[i].time,
                         price:result[i].price/100,
                         trade_type:result[i].trade_type,
@@ -142,6 +147,29 @@ suporter.prototype.transData=function(code,callback){
 
 }
 
+suporter.prototype.convertface=function(results){
+    var items=[];
+    if(results&&results.length)
+        for(var i in results){
+            items.push({
+                no:results[i]._no.toString().substring(1),
+                date:results[i]._date.toLocaleDateString(),
+                min:results[i]._min/100,
+                max:results[i]._max/100,
+                ud:results[i].ud/100,
+                lastprice:results[i].lastprice/100,
+                face:results[i].face,
+                dde_b:results[i].dde_b,
+                dde_s:results[i].dde_s,
+                mainforce:results[i].mainforce,
+                state:results[i]._state,
+                state:results[i].per/10000,
+            });
+        }
+
+    return items;
+}
+
 suporter.prototype.getfaces=function(item,callback){
 
     module.exports.getConnction(function(err, conn) {
@@ -149,12 +177,13 @@ suporter.prototype.getfaces=function(item,callback){
         var tempno;
         if(item.date&&item.no){
             var tempno=Number(item.no);
-            if(tempno<1000000)tempno+1000000;
+            if(tempno<1000000)tempno+=1000000;
             str+="_no="+tempno;
             str+=" and _date='"+item.date+"';";
         }
         else if(item.no){
-            if(tempno<1000000)tempno+1000000;
+            var tempno=Number(item.no);
+            if(tempno<1000000)tempno+=1000000;
             str+="_no="+tempno;
         }
         else if (item.date){
@@ -163,24 +192,16 @@ suporter.prototype.getfaces=function(item,callback){
 
 
         conn.query(str,function(err,results){
-            var items=[];
-            if(results&&results.length)
-            for(var i in results){
-                items.push({
-                    no:results[i]._no,
-                    date:results[i]._date,
-                    min:results[i]._min,
-                    max:results[i]._max,
-                    ud:results[i].ud,
-                    lastprice:results[i].lastprice,
-                    face:results[i].face,
-                    dde_b:results[i].dde_b,
-                    dde_s:results[i].dde_s,
-                    mainforce:results[i].mainforce,
-                    state:results[i]._state,
-                });
-            }
+           var items=module.exports.convertface(results);
+            callback(err,items);
+        })
+    });
+}
 
+suporter.prototype.getfacesbysql=function(sql,callback){
+    module.exports.getConnction(function(err, conn) {
+        conn.query(sql,function(err,results){
+            var items=module.exports.convertface(results);
             callback(err,items);
         })
     });
@@ -245,7 +266,7 @@ suporter.prototype.updatacodeface=function(item,callback){
         module.exports.getConnction(function(err,conn){
 
             if(face){
-                var faids=["_state","_min","_max","face","dde","dde_s","dde_b","ud","mainforce","lastprice"];
+                var faids=["_state","_min","_max","face","dde","dde_s","dde_b","ud","mainforce","lastprice","per"];
                 var str="";
                 for (var i in faids){
                     if(item[faids[i]]==undefined) continue;
@@ -275,7 +296,29 @@ suporter.prototype.updatacodeface=function(item,callback){
 
 suporter.prototype.test=function(){
 
-module.exports.getcodeface("300469","2016-12-19",function(a,b){
+module.exports.getfaces({date:'2017-01-04'},function(a,b){
+    module.exports.getConnction(function(err,conn){
+        {
+            async.mapLimit(b,1,function(item,mapcallback){
+                var str1="select * from time_price where "
+                module.exports.getValueByDayNo({no:Number(item.no)+1000000,date:"2017-01-04"},function(err,rs){
+                    for(var i in rs){
+                        console.log(rs[i].no)
+                        if(rs[i].no>2000000)
+                        rs[i].no=rs.no-1000000
+                      //  console.log(rs[i].no)
+                    }
+
+                    mapcallback(null,null);
+                })
+
+
+
+            },function(err,result){
+
+            })
+        }
+    });
 
 })
 
