@@ -48,7 +48,7 @@ DataMeeter.prototype.checkValueDate=function(callback){
     //callback(null, false);
     //return false;
     var date=new Date();
-    if(date.getHours()<8){
+    if(date.getHours()<15){
         callback(null,true);
         return;
     }
@@ -69,7 +69,7 @@ DataMeeter.prototype.checkValueDate=function(callback){
             global.datestr=str;
             //var datastr=date.getFullYear()+"-"+(date.getMonth()+1)+"-"+date.getDate();
             dbsuport.getcodeface("000001",str,function(err,result){
-                callback(null,result!=null);
+                callback(null,result!=null&&result.state);
             })
         });
     });
@@ -97,7 +97,7 @@ DataMeeter.prototype.getValuesByNo=function(item,allcallback){
 
         var allurls=  module.exports.getUrlsByCode(item.no);
 
-        async.mapLimit(allurls,8,function(codeurl,callback){
+        async.mapLimit(allurls,16,function(codeurl,callback){
             var  longstr="";
             var options ={
                 hostname: 'quotes.money.163.com',
@@ -203,7 +203,7 @@ DataMeeter.prototype.getValuesByNo=function(item,allcallback){
                         date:global.datestr,
                         _min:Math.floor(item.min*100),
                         _max:Math.floor(item.max*100) ,
-                        _state:1
+                        state:1
                     };
 
                     dbsuport.updatacodeface(face,function(err,s){
@@ -256,7 +256,7 @@ DataMeeter.prototype.getAllCodeValues=function(codes){
         );
     }
 
-    async.mapLimit(list,6,module.exports.getValuesByNo,function(err,results){
+    async.mapLimit(list,12,module.exports.getValuesByNo,function(err,results){
         var date=new Date();
         module.exports.console(global.datestr+" data save succeed")
 
@@ -278,6 +278,7 @@ DataMeeter.prototype.getAllCodeValues=function(codes){
             dbsuport.updatacodeface({
                 _id:"000001_"+global.datestr,
                 no:"000001",
+                state:1,
                 date:global.datestr
             },function(err,r){
                 global.curCodes=null;
@@ -327,13 +328,15 @@ DataMeeter.prototype.startwork=function(){
 
         module.exports.console("start data meet");
             nohelper.getallno(function(err,allno){
-                global.curCodes=allno;
+                var codes=[];
                 if(allno&&allno.length>0){
                     for(var i in allno){
-                            if(allno[i].state)allno[i].save=true;
+                        if(allno[i].state||allno[i].no=="000001"||allno[i].no=="1000001")allno[i].save=true;
+                        else codes.push(allno[i]);
                     }
                 }
-                module.exports.getAllCodeValues(allno);
+                global.curCodes=codes;
+                module.exports.getAllCodeValues(codes);
 
             })
     });

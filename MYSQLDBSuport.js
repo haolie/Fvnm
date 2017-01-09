@@ -12,22 +12,28 @@ var  process = require('process');
 
 var suporter=function(){}
 
-suporter.prototype.connction=null;
+suporter.prototype.connctions=[null,null,null];
+suporter.prototype.cindex=0;
 suporter.prototype.getConnction=function(callback){
-    if(module.exports.connction==null){
-        module.exports.connction=mysql.createConnection({
+    var curindex=module.exports.cindex;
+    module.exports.cindex+=1;
+    if(module.exports.cindex>=module.exports.connctions.length)module.exports.cindex=0;
+
+
+    if(module.exports.connctions[curindex]==null){
+        module.exports.connctions[curindex]=mysql.createConnection({
             host:'localhost',
             user:'mysql',
             password:'123456',
             database:'finance',
             useConnectionPooling: true
         });
-        module.exports.connction.connect(function(a,b){
-            callback(null,module.exports.connction);
+        module.exports.connctions[curindex].connect(function(a,b){
+            callback(null,module.exports.connctions[curindex]);
         });
     }
     else
-    callback(null,module.exports.connction);
+    callback(null,module.exports.connctions[curindex]);
 }
 
 suporter.prototype.getInsertStr=function(item){
@@ -162,8 +168,8 @@ suporter.prototype.convertface=function(results){
                 dde_b:results[i].dde_b,
                 dde_s:results[i].dde_s,
                 mainforce:results[i].mainforce,
-                state:results[i]._state,
-                state:results[i].per/10000,
+                state:results[i].state,
+                per:results[i].per/10000,
             });
         }
 
@@ -231,12 +237,14 @@ suporter.prototype.savecodefaces=function(items,callback){
 
     module.exports.getConnction(function(err,conn){
         async.mapLimit(lists,1,function(list,mapcallback){
-           var str="INSERT INTO codeface(_no,_date,_min,_max,ud,lastprice,face,dde,dde_b,dde_s,mainforce,_state)" +
+           var str="INSERT INTO codeface(_no,_date,_min,_max,ud,lastprice,face,dde,dde_b,dde_s,mainforce,state)" +
                 " VALUES" ;
             for (var i in list){
                 item=list[i];
+                var no=Number(item.no);
+                if(no<1000000)no+=1000000;
                 str+='(' +
-                    (Number(item.no) +1000000)+','+
+                    no+','+
                     '"'+ item.date+'"'+','+
                     (module.exports.getValueSql(item,'min')*100)+','+
                     (module.exports.getValueSql(item,'max')*100)+','+
@@ -266,20 +274,16 @@ suporter.prototype.updatacodeface=function(item,callback){
         module.exports.getConnction(function(err,conn){
 
             if(face){
-                var faids=["_state","_min","_max","face","dde","dde_s","dde_b","ud","mainforce","lastprice","per"];
+                var faids=["state","_min","_max","face","dde","dde_s","dde_b","ud","mainforce","lastprice","per"];
                 var str="";
                 for (var i in faids){
                     if(item[faids[i]]==undefined) continue;
 
                     if(str.length>0) str+=",";
-                    if(faids[i]=="date"){
-
-                    }
-                    else
                     str+=faids[i]+"="+item[faids[i]];
                 }
 
-                var tmno=Number(item.no);if(tmno<1000000)tmno+1000000;
+                var tmno=Number(item.no);if(tmno<1000000)tmno+=1000000;
                 str="update codeface set "+str+" where _no="+tmno+" and _date='"+item.date+"';";
                 conn.query(str,function(err,r){if(callback)callback(err,r)
                 })
