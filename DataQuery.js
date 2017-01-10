@@ -98,7 +98,7 @@ vm.prototype.onafterdaysQuery=function(req,res,query){
 }
 
 vm.prototype.getafterdays=function(date,no,callback){
-    var date=new Date(date);
+    var date=new Date(date).setHours(22);
     var max=5;
     dbsuport.getfaces({no:no},function(err,faces){
         var dates=[];

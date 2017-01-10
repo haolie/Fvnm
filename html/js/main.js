@@ -9,11 +9,13 @@ jQuery(function($){
             //alert($("#chart").width()) tab_charts
             $("#chart").height(Math.min($(document).height()-162,$("#chart").width()));
             $('#chart').bind('swiperight swiperightup swiperightdown',function(){
-                current.queryDataByDateNo(Number(curindex)+1);
+
+                current.setcurCode(Number(curindex)+1,true);
             })
 
             $('#chart').bind('swipeleft swipeleftup swipeleftdown',function(){
-                current.queryDataByDateNo(Number(curindex)-1);
+
+                current.setcurCode(Number(curindex)-1,true);
             })
         })
 
@@ -43,8 +45,10 @@ jQuery(function($){
             current.date =datestr;
             $.get(baseUrl+ "dateface?face=2&per=0.03&date="+datestr,function(data,status){
                 var items= eval(data);
-                allitems=items;
+                allitems=[];
                 for(var i in items){
+                    if(items[i].no=="000001") continue;
+                    allitems.push(items[i]);
                     var temp =  $('<li style="cursor: pointer"><a ><i class="menu-icon fa fa-caret-right"></i></a> <b class="arrow"></b></li>');
                     $(temp).children("a").text(items[i].no);
                     $("#aolist").append(temp[0]);
@@ -142,7 +146,8 @@ jQuery(function($){
     mcar.prototype.date="";
     mcar.prototype.setcurCode=function(index){
         curindex=index;
-        current.queryDataByDateNo(allitems[index].no ,current.date);
+        current.settable(allitems[index].no ,current.date)
+
     }
 
     mcar.prototype.settable=function(code,date){
@@ -150,11 +155,12 @@ jQuery(function($){
         $("#tab_charts").children(".tab-content").html('');
 
         current.insertTabItem(date);
-        var geturl=baseUrl+"afterdays?no="+code+"&date="+date+"$count=5";
-        $get(geturl,function(data,status){
+        current.queryDataByDateNo(code,date);
+        var geturl=baseUrl+"afterdays?no="+code+"&date="+date+"&count=5";
+        $.get(geturl,function(data,status){
             dates=JSON.parse(data);
             for(var i in dates){
-                current.insertTabItem(dates[1]);
+                current.insertTabItem(dates[i]);
             }
         })
 
@@ -162,10 +168,12 @@ jQuery(function($){
 
     mcar.prototype.insertTabItem=function(date){
         var $headhtml=$('<li><a data-toggle="tab" aria-expanded="false"><i class="pink ace-icon fa fa-tachometer bigger-110"></i></a></li>');
-        $headhtml.children("a").href("#item_"+date).text(date);
+        $headhtml.children("a").attr("href","#item_"+date).text(date);
 
-        var $contenthtml=$(' <div class="tab-pane">');
-        $contenthtml.id("#item_"+date);
+
+        var $contenthtml=$(' <div id="item_' +
+            date+'" class="tab-pane item-chart">');
+
 
         $("#tab_charts").children("ul").append($headhtml);
         $("#tab_charts").children(".tab-content").append($contenthtml);

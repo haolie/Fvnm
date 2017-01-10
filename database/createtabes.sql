@@ -19,5 +19,7 @@ dde INT,
 dde_b INT UNSIGNED,
 dde_s INT UNSIGNED,
 mainforce INT UNSIGNED,
+_state tinyint,
+per smallint
 primary key (_no,_date)
 );
