@@ -154,7 +154,7 @@ jQuery(function($){
         $("#tab_charts").children("ul").html('');
         $("#tab_charts").children(".tab-content").html('');
 
-        current.insertTabItem(date);
+        current.insertTabItem(date,1);
         current.queryDataByDateNo(code,date);
         var geturl=baseUrl+"afterdays?no="+code+"&date="+date+"&count=5";
         $.get(geturl,function(data,status){
@@ -166,14 +166,16 @@ jQuery(function($){
 
     }
 
-    mcar.prototype.insertTabItem=function(date){
+    mcar.prototype.insertTabItem=function(date,active){
         var $headhtml=$('<li><a data-toggle="tab" aria-expanded="false"><i class="pink ace-icon fa fa-tachometer bigger-110"></i></a></li>');
         $headhtml.children("a").attr("href","#item_"+date).text(date);
 
 
         var $contenthtml=$(' <div id="item_' +
             date+'" class="tab-pane item-chart">');
-
+        if(active)
+            $contenthtml=$(' <div id="item_' +
+                date+'" class="tab-pane item-chart active">');
 
         $("#tab_charts").children("ul").append($headhtml);
         $("#tab_charts").children(".tab-content").append($contenthtml);
