@@ -121,5 +121,5 @@ da.prototype.startworker=function(){
 
 
 module.exports=new da();
-module.exports.startworker();
-setInterval(module.exports.startworker,3600000);
+//module.exports.startworker();
+//setInterval(module.exports.startworker,3600000);

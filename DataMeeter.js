@@ -8,6 +8,7 @@ var hashmap=require("hashmap");
 var nohelper = require('./nohelper.js');
 //var dbsuport = require('./MGDBSuport.js');
 var dbsuport = require('./MYSQLDBSuport.js');
+var analyser = require('./dataAnalyser.js');
 var  process = require('process');
 var url=require("url");
 var zlib = require('zlib');
@@ -282,6 +283,7 @@ DataMeeter.prototype.getAllCodeValues=function(codes){
                 date:global.datestr
             },function(err,r){
                 global.curCodes=null;
+                analyser.startworker();
             });
         }
 

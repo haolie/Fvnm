@@ -5,6 +5,10 @@ jQuery(function($){
     var baseUrl="../node/";
     var mcar=function(){};
     mcar.prototype.init=function(){
+        $('#tab_charts').on('shown.bs.tab', function (e) {
+            if(e.target)
+            alert(e.target.innerHTML)
+        })
         $("#chart").ready(function(){
             //alert($("#chart").width()) tab_charts
             $("#chart").height(Math.min($(document).height()-162,$("#chart").width()));
@@ -172,13 +176,18 @@ jQuery(function($){
 
 
         var $contenthtml=$(' <div id="item_' +
-            date+'" class="tab-pane item-chart">');
+            date+'" class="tab-pane item-chart" onload="alert(33)"/>');
         if(active)
             $contenthtml=$(' <div id="item_' +
                 date+'" class="tab-pane item-chart active">');
+        $contenthtml.on("hidden.bs.tab",function(){alert("load")});
+
 
         $("#tab_charts").children("ul").append($headhtml);
         $("#tab_charts").children(".tab-content").append($contenthtml);
+
+
+
     }
 
     var current=new mcar();
