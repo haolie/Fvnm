@@ -6,8 +6,11 @@ jQuery(function($){
     var mcar=function(){};
     mcar.prototype.init=function(){
         $('#tab_charts').on('shown.bs.tab', function (e) {
-            if(e.target)
-            alert(e.target.innerHTML)
+            if(e.target&&!$("#head_"+e.target.innerHTML).attr("state")){
+                current.queryDataByDateNo(current.currentno,e.target.innerHTML);
+
+            }
+
         })
         $("#chart").ready(function(){
             //alert($("#chart").width()) tab_charts
@@ -85,20 +88,27 @@ jQuery(function($){
     mcar.prototype.queryDataByDateNo=function(no,date){
 
         var geturl=baseUrl+"dayvalue?no="+no+"&date="+date;
+
         $("#titleno").text(no);
+        $("#head_"+date).attr("state",1);
 
         $.get(geturl,function(data,status){
-            var myChart = echarts.init(document.getElementById("item_"+date));
+            var myChart = echarts.init($('#item_'+date).children(".chart-view")[0]);
+
             data=JSON.parse(data);
+            if(data.face==3){
+                var $btn= $("#tab_charts").children(".tab-content").children(".active").children(".chart-btn-set")[0];
+                $($btn).addClass("btn-success")
+            }
             var listy=[];
             var listx=[];
             $.each(data.data,function(d,a){
-                var date=new Date(a.time*1000);
+                var date=new Date(a.time);
                 //list.push([date.getHours()+':'+date.getMinutes(), a.price]);
                 listy.push(date.getHours()+':'+date.getMinutes());
                 listx.push(a.price);
             });
-            var price=data.lastPrice-data.ud;
+            var price=data.lastprice-data.ud;
             maxy=Math.max(Math.abs(data.max-price),Math.abs(data.min-price));
             miny=price-maxy;
             maxy=price+maxy;
@@ -106,9 +116,6 @@ jQuery(function($){
             option = {
                 tooltip : {
                     trigger: 'axis'
-                },
-                toolbox: {
-                    show : false
                 },
                 calculable : true,
                 xAxis : [
@@ -157,7 +164,7 @@ jQuery(function($){
     mcar.prototype.settable=function(code,date){
         $("#tab_charts").children("ul").html('');
         $("#tab_charts").children(".tab-content").html('');
-
+        current.currentno=code;
         current.insertTabItem(date,1);
         current.queryDataByDateNo(code,date);
         var geturl=baseUrl+"afterdays?no="+code+"&date="+date+"&count=5";
@@ -171,17 +178,29 @@ jQuery(function($){
     }
 
     mcar.prototype.insertTabItem=function(date,active){
-        var $headhtml=$('<li><a data-toggle="tab" aria-expanded="false"><i class="pink ace-icon fa fa-tachometer bigger-110"></i></a></li>');
+        var $headhtml=$('<li id="head_' +date+
+            '"><a data-toggle="tab" aria-expanded="false"><i class="pink ace-icon fa fa-tachometer bigger-110"></i></a></li>');
         $headhtml.children("a").attr("href","#item_"+date).text(date);
-
-
+        if(active)
+        $headhtml.addClass("active");
         var $contenthtml=$(' <div id="item_' +
-            date+'" class="tab-pane item-chart" onload="alert(33)"/>');
+            date+'" class="tab-pane item-chart" />');
         if(active)
             $contenthtml=$(' <div id="item_' +
                 date+'" class="tab-pane item-chart active">');
-        $contenthtml.on("hidden.bs.tab",function(){alert("load")});
 
+
+        var $btn=$('<button class="chart-btn-set ace-icon fa fa-pencil align-top bigger-125"/>');
+        $($btn).click(function(a,b){
+           var date= $("#tab_charts").children("ul").children(".active").children("a")[0].innerHTML
+            var geturl=baseUrl+"faceset?no="+current.currentno+"&date="+date+"&face=3";
+            $.get(geturl,function(data,status){
+                var $btn= $("#tab_charts").children(".tab-content").children(".active").children(".chart-btn-set")[0];
+                $($btn).addClass("btn-success")
+            })
+        })
+        $contenthtml.append($('<div class="chart-view "/>'));
+        $contenthtml.append($btn);
 
         $("#tab_charts").children("ul").append($headhtml);
         $("#tab_charts").children(".tab-content").append($contenthtml);

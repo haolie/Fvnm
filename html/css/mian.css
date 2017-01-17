@@ -1,3 +1,16 @@
 .item-chart{
     height: 100%;
 }
+.chart-view{
+    height: 100%;
+}
+.chart-btn-set{
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    height: 25px;
+    width: 50px;
+}
+#tab_charts{
+    padding: 0px;
+}

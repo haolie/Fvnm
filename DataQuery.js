@@ -20,8 +20,8 @@ vm.prototype.ondatefaceQuery=function(req,res,query){
     if(query.face) item.face= parseInt(query.face);
     if(query.per!=undefined) item.per={$lte:parseFloat(query.per) };
 
-    var str="select * from codeface where _date='"+query.date+"' and per<"+query.per*10000+";";
-
+    //var str="select * from codeface where _date='"+query.date+"' and per<"+query.per*10000+";";
+    var str="select * from codeface where _date='"+query.date+"';";
     dbsuport.getfacesbysql(str,function(err,faces){
 
         res.end(JSON.stringify(faces));
@@ -93,6 +93,13 @@ vm.prototype.onafterdaysQuery=function(req,res,query){
     module.exports.getafterdays(query.date,query.no,function(err,dates){
         if(query.count&&query.count<dates.length)dates=dates.slice(0,query.count-1);
         res.end(JSON.stringify(dates));
+    })
+
+}
+
+vm.prototype.onfacesetQuery=function(req,res,query){
+    dbsuport.updatacodeface({no:query.no,date:query.date,face:query.face},function(err,result){
+        res.end("");
     })
 
 }
