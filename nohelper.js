@@ -8,14 +8,21 @@ var token="";
 var fs= require('fs');
 var path = require('path');
 var dbsuport = require('./MYSQLDBSuport.js');
+var request=require('request');
+var querylimit=8;
 
 var nohelper=function Nohelper(){}
 
-nohelper.prototype.getallnofromweb=function(callback){
+nohelper.prototype.currentDate=null;
+nohelper.prototype.allItems=null;
+
+nohelper.prototype.getallnofromweb=function(date,callback){
     var index=1;
     var pageCount=0;
     var allcodes=[];
-    this.getToken(function(err,tokenObj){
+    this.currentDate=date;
+    this.allItems={};
+    this.getToken(date,function(err,tokenObj){
         token=tokenObj.token;
         pageCount=Math.floor(tokenObj.code_count/70);
         if(Math.floor(tokenObj.code_count%70)>0)
@@ -26,7 +33,7 @@ nohelper.prototype.getallnofromweb=function(callback){
             indexarray.push(i);
         }
 
-        async.mapLimit(indexarray,5,module.exports.getno,function(err,results){
+        async.mapLimit(indexarray,querylimit,module.exports.getno,function(err,results){
             for(var i=0;i<results.length;i++){
                 allcodes= allcodes.concat(results[i]);
             }
@@ -39,6 +46,8 @@ nohelper.prototype.getallnofromweb=function(callback){
     });
 
 };
+
+
 
 nohelper.prototype.getno=function(index,callback){
     var url="http://www.iwencai.com/stockpick/cache?token=" +token
@@ -60,13 +69,15 @@ nohelper.prototype.getno=function(index,callback){
             var temp=JSON.parse(buf.toString().toLowerCase());
             var result=[];
             for(var i=0;i<temp.result.length;i++){
+                if(temp.result[i][5]=="--") continue;
                 var codestr=temp.result[i][0].toString();
                 codestr=codestr.replace(".sz","");
                 codestr=codestr.replace(".sh","");
                 result.push({no:codestr,
-                    date:global.datestr,
+                    date:module.exports.currentDate,
                     state:0,
-                    lastprice:Number(temp.result[i][2])  ,//现价
+
+                    //lastprice:Number(temp.result[i][2])  ,//现价
                     dde:Number(temp.result[i][4])  ,//dde 尽量
                     dde_b:Number(temp.result[i][6])  ,//dde 买入（w）
                     dde_s:Number(temp.result[i][7])  ,//dde 卖出（w）
@@ -79,10 +90,11 @@ nohelper.prototype.getno=function(index,callback){
     })
 }
 
-nohelper.prototype.getToken=function(callback){
+nohelper.prototype.getToken=function(date,callback){
     //var url="http://www.iwencai.com/stockpick/search?typed=1&preParams=&ts=1&f=1&qs=result_rewrite&selfsectsn=&querytype=&searchfilter=&tid=stockpick&w=%E5%87%80%E9%87%8F";
-    var url="http://www.iwencai.com/stockpick/search?typed=1&preParams=&ts=1&f=1&qs=result_rewrite&selfsectsn=&querytype=&searchfilter=&tid=stockpick&w=dde+%E6%B6%A8%E8%B7%8C";
-    //url+=datastr;
+    var url="http://www.iwencai.com/stockpick/search?typed=1&preParams=&ts=1&f=1&qs=result_rewrite&selfsectsn=&querytype=&searchfilter=&tid=stockpick&w=dde" +
+       date+ "+%E6%B6%A8%E8%B7%8C";
+    url+=date;
    // url+="涨跌";
    http.get(url,function(resp){
        var length=0;
@@ -117,7 +129,28 @@ nohelper.prototype.savenofile=function(items,callback){
 
 }
 
+nohelper.prototype.getwebDates=function(start,callback){
+    var uri="http://quotes.money.163.com/service/chddata.html?code=0000001&start=" +
+        new Date(start).toLocaleDateString().replace(/-/g,"")+
+        "&end=" +
+        new Date(global.datestr).toLocaleDateString().replace(/-/g,"")+
+        "&fields=TCLOSE;HIGH;LOW;TOPEN;LCLOSE;CHG;PCHG;VOTURNOVER;VATURNOVER";
 
+    var file="./datafiles/sh000001.xls";
+    var stream = fs.createWriteStream(file);
+    request(uri).pipe(stream).on('close', function(err,result){
+        fs.readFile(file, function (err,bytesRead) {
+            var dates=[];
+            var strs= bytesRead.toString("utf8").split("\r\n");
+            for (var i=1;i<strs.length;i++){
+                var temp=strs[i].split(',');
+                if(temp.length>2) dates.push(temp[0]);
+            }
+            callback(null,dates)
+        });
+    });
+
+}
 
 nohelper.prototype.getallnofromlocal=function(datestr, callback){
     fs.exists(path.join(__dirname, 'history/'+datestr),function(exist){
@@ -132,13 +165,13 @@ nohelper.prototype.getallnofromlocal=function(datestr, callback){
     })
 }
 
-nohelper.prototype.getallno=function(getallnocallback){
+nohelper.prototype.getallno=function(date,getallnocallback){
 
-    dbsuport.getfaces({date: global.datestr},function(err,items){
+    dbsuport.getfaces({date:date},function(err,items){
         if(err==null&&items&&items.length>0)
             getallnocallback(err,items);
         else
-        module.exports.getallnofromweb(function(err,items){
+        module.exports.getallnofromweb(date,function(err,items){
             if(err)getallnocallback("获取出错",null);
             else{
                 dbsuport.savecodefaces(items,function(err,result){
@@ -150,4 +183,6 @@ nohelper.prototype.getallno=function(getallnocallback){
 }
 
 
-module.exports=new nohelper()
+module.exports=new nohelper();
+//global.datestr="2017-01-26"
+//module.exports.getwebDates("2017-01-23")

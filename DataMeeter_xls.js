@@ -9,9 +9,15 @@ var nohelper = require('./nohelper.js');
 //var dbsuport = require('./MGDBSuport.js');
 var dbsuport = require('./MYSQLDBSuport.js');
 var analyser = require('./dataAnalyser.js');
+var tool = require('./tools.js');
 var  process = require('process');
 var url=require("url");
 var zlib = require('zlib');
+var xls=require('xls-to-json');
+var fs= require('fs');
+var request=require('request');
+var cluster = require('cluster');
+var childProgresscount=2;
 
 //
 var tempCodes=['300207','600313','600510'];
@@ -87,6 +93,135 @@ DataMeeter.prototype.checkValueDate=function(callback){
 
 }
 
+DataMeeter.prototype.downCodeFile=function(item,callback){
+    url="http://quotes.money.163.com/cjmx/2017/20170126/1000651.xls";
+    var stream = fs.createWriteStream("./datafiles/1000651.xls");
+    request(url).pipe(stream).on('close', function(err,result){
+
+    });
+}
+
+DataMeeter.prototype.readDataFile=function(){
+
+    url="http://quotes.money.163.com/cjmx/2017/20170126/1000651.xls";
+    var stream = fs.createWriteStream("./datafiles/1000651.xls");
+    request(url).pipe(stream).on('close', function(err,result){
+
+    });
+return;
+
+    fs.createReadStream('file.json').pipe(request.put('http://mysite.com/obj.json'))
+    xls({
+        input: "./datafiles/0601668.xls",  // input xls
+        output: "./datafiles/output.json", // output json
+        sheet: "0601668_成交明细_2017-01-25"  // specific sheetname
+    }, function(err, result) {
+        if(err) {
+            console.error(err);
+        } else {
+            console.log(result);
+        }
+    });
+
+    //xls.open('./datafiles/sh600837_20170124.xls',function(err,sheet){
+
+   // })
+   // var list = xls.parse("./datafiles/" + "sh600837_成交明细_20170124.xls");
+}
+
+DataMeeter.prototype.dataContext={
+    index:0,
+    items:[],
+    getItem:function(){
+        var cur=module.exports.dataContext;
+        while (true){
+            if(cur.index>=items.length){
+                for(var i=0;i<cur.items.length;i++){
+                    if(cur.items[i].state<3){
+                        cur.index=i;
+                        break;
+                    }
+                }
+                if(cur.index>=items.length) return null;
+                continue;
+            }
+
+            var temp=cur.items[cur.index];
+            cur++;
+            if(temp.state<3)
+            return temp;
+        }
+
+    }
+}
+
+DataMeeter.prototype.downDateFiles=function(date,callback){
+    nohelper.getallno(date,function(err,codes){
+        async.mapLimit(codes,4,function(item,mapcb){
+            var file="./datafiles/"+date+"_"+item.no +".xls";
+            fs.exists(file,function(exist){
+                if(exist){
+                    module.exports.console("exist："+item.no);
+                    mapcb(null,0);
+                }
+                else {
+                    var datetime=new Date(date);
+                    url="http://quotes.money.163.com/cjmx/" +
+                        datetime.getFullYear() + "/" +
+                        datetime.toLocaleDateString().replace(/-/g,'') +"/";
+                    if(Number(item.no)>=600000)url+=0;
+                    else url+=1;
+                    url+= item.no +".xls";
+                    var stream = fs.createWriteStream(file);
+                    request(url).pipe(stream).on('close', function(err,result){
+                        module.exports.console("下载成功："+file);
+                        item.savestate=0;
+                        module.exports.dataContext.items.push(item);
+                        mapcb(err,result);
+                    });
+                }
+            })
+        },function(err,result){
+            callback(err,result);
+        })
+    });
+}
+
+DataMeeter.prototype.startFiledown=function(callback){
+    module.exports.getQueryDates(function(err,dates){
+        if(dates==null||dates.length==0){
+            callback(null,1)
+            return;
+        }
+        async.mapLimit(dates,1,module.exports.downDateFiles,function(err,result){
+            callback(err,result)
+        });
+    });
+}
+
+DataMeeter.prototype.getQueryDates=function(callback){
+    var tempdate=new Date(global.datestr);
+     tempdate.add('d',-7);
+    tempdate=tempdate.toLocaleDateString();
+    nohelper.getwebDates(tempdate,function(err,dates){
+        var date=[];
+        if(dates==null&&dates.length==0){
+            date.push(global.datestr);
+            callback(null,date)
+            return;
+        }
+        async.mapLimit(dates,1,function(d,cb){
+            dbsuport.getfaces({no:1,date:d},function(err,items){
+                if(items==null||items.length==0)date.push(d);
+                cb(null,1);
+            });
+        },function(err,result){
+            callback(null,date);
+        })
+
+    });
+}
+
 DataMeeter.prototype.getValuesByNo=function(item,allcallback){
 
     var index=0;
@@ -104,7 +239,6 @@ DataMeeter.prototype.getValuesByNo=function(item,allcallback){
         }
 
         var allurls=  module.exports.getUrlsByCode(item.no);
-
         async.mapLimit(allurls,2,function(codeurl,callback){
             var  longstr="";
             var options ={
@@ -346,34 +480,55 @@ DataMeeter.prototype.startwork=function(){
         }
 
         module.exports.console("start data meet");
-            nohelper.getallno(function(err,allno){
-                var codes=[];
-                if(allno&&allno.length>0){
-                    for(var i in allno){
-                        if(allno[i].state||allno[i].no=="000001"||allno[i].no=="1000001")allno[i].save=true;
-                        else codes.push(allno[i]);
-                    }
-                }
-                global.curCodes=codes;
-                module.exports.getAllCodeValues(codes);
+        module.exports.startFiledown(function(err,dates){
 
-            })
+        })
     });
 }
 
 DataMeeter.prototype.isWorking=null;
-
+DataMeeter.prototype.progress=[];
+DataMeeter.prototype.child_id="";
+DataMeeter.prototype.child_free=true;
 DataMeeter.prototype.start=function(){
-    module.exports.isWorking=true;
 
-    setInterval(function(){
-        if(module.exports.isWorking) return;
+    if(cluster.isMaster){
+        module.exports.isWorking=true;
+
+        setInterval(function(){
+            if(module.exports.isWorking) return;
+            module.exports.startwork();
+        },180000)
+
         module.exports.startwork();
-    },180000)
+return;
+        for (var i = 0; i < childProgresscount; i++) {
+            var tempfork= cluster.fork()
+            tempfork.on("message",function(msg){
+                msg=JSON.parse(msg);
+                if(msg.type=="state"){
 
-    module.exports.startwork();
+                }
+                else  if(msg.type=="handled"){
+
+                }
+            })
+            module.exports.progress.push({id:i,worker:tempfork,free:false}) ;//启动子进程
+            tempfork.send({type:'id',id:i});
+        }
+    }
 
 
+    process.on("message",function(msg){
+        msg=JSON.parse(msg);
+        if(msg.type=="id"){
+            module.exports.child_id=msg.id;
+        }
+        else if(msg.type=="items"){
+
+        }
+
+    })
 
 }
 
