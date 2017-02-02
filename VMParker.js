@@ -1,4 +1,5 @@
 var fork = require('child_process').fork;
+var http = require('http');
 
 var vm=function(){}
 
@@ -26,6 +27,7 @@ vm.prototype.startDataServer=function(){
     var worker= fork("DataQuery.js")
 
     worker.on("message",function(msg){
+
         module.exports.timeConsole(msg);
     })
 
@@ -37,10 +39,36 @@ vm.prototype.startDataServer=function(){
     })
 }
 
+vm.prototype.startAdvan=function(){
+    var worker= fork("dataAdvander.js")
+
+    worker.on("message",function(msg){
+        module.exports.timeConsole(msg);
+    })
+
+    worker.on("create",function(er){
+        console.log("create")
+    })
+
+    setTimeout(function(){
+        worker.send("1232");
+    },1000)
+
+
+    worker.on("exit",function(){
+        console.log("DataQuery exit");
+        worker.kill();
+        worker=null;
+        setTimeout(module.exports.startDataServer,5000);
+    })
+}
+
 
 vm.prototype.start=function(){
-    module.exports.startDataMeeter();
+   module.exports.startDataMeeter();
+    //module.exports.startAdvan();
     module.exports.startDataServer();
+
 }
 
 module.exports=new vm();
