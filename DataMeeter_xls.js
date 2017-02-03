@@ -426,7 +426,7 @@ DataMeeter.prototype.child_sendMsg=function(msg,type){
 DataMeeter.prototype.isWorking=null;
 DataMeeter.prototype.progress=[];
 DataMeeter.prototype.child_id="";
-DataMeeter.prototype.child_free=true;
+DataMeeter.prototype.child_working=true;
 DataMeeter.prototype.start=function(){
 
     //module.exports.saveToDb({no:'000166',date:"2017-01-26"},function(err,items){
@@ -456,9 +456,12 @@ DataMeeter.prototype.start=function(){
                 else  if(msg.type=="console"){
                     module.exports.console(msg.msg);
                 }
+                else  if(msg.type=="itemneed"){
+
+                }
             })
             module.exports.progress.push({id:i,worker:tempfork,free:false}) ;//启动子进程
-            tempfork.send({type:'id',id:i});
+            tempfork.send(JSON.stringify({type:'id',id:i}) );
         }
 
         return;
@@ -476,6 +479,12 @@ DataMeeter.prototype.start=function(){
         }
 
     })
+
+    setInterval(function(){
+        if(module.exports.child_working) return;
+
+        module.exports.child_sendMsg({last:null},"itemneed")
+    },1000)
 
 }
 
