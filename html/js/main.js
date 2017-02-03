@@ -54,7 +54,7 @@ jQuery(function($){
                 var items= eval(data);
                 allitems=[];
                 for(var i in items){
-                    if(items[i].no=="000001") continue;
+                    if(items[i].no==global.shcode) continue;
                     allitems.push(items[i]);
                     var temp =  $('<li style="cursor: pointer"><a ><i class="menu-icon fa fa-caret-right"></i></a> <b class="arrow"></b></li>');
                     $(temp).children("a").text(items[i].no);

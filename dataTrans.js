@@ -58,7 +58,18 @@ transfer.prototype.transCode=function(codes,callback){
 }
 
 transfer.prototype.deleteall=function(){
-    sqlsuport.getfaces({date:'2017-01-04'},function(err,result){
+    sqlsuport.getfaces({no:1},function(err,result){
+        var items=[];
+        for(var i=0;i<result.length;i++){
+            items.push({
+                no:global.shcode,
+                date:result[i].date,
+                state:1
+            })
+        }
+        sqlsuport.savecodefaces(items,function(err,result){
+
+        })
 
     })
 }

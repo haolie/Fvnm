@@ -76,7 +76,7 @@ da.prototype.checkdate=function(callback){
         if(config.lastAnalyse)
         lastDateStr=new Date(config.lastAnalyse);
 
-        dbsuport.getfaces({no:000001},function(err,sh){
+        dbsuport.getfaces({no:global.shcode},function(err,sh){
             var dates=[];
             if(err||sh==null){
                 callback(null,dates);

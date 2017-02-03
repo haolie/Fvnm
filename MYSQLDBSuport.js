@@ -8,6 +8,7 @@ var tool = require('./tools.js');
 var codeface="codeface";
 var time_price="time_price";
 var  process = require('process');
+ global.shcode=912261;
 
 
 var suporter=function(){}

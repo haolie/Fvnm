@@ -130,6 +130,7 @@ nohelper.prototype.savenofile=function(items,callback){
 }
 
 nohelper.prototype.getwebDates=function(start,callback){
+    start="2017-01-20";
     var uri="http://quotes.money.163.com/service/chddata.html?code=0000001&start=" +
         new Date(start).toLocaleDateString().replace(/-/g,"")+
         "&end=" +

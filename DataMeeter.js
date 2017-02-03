@@ -76,7 +76,7 @@ DataMeeter.prototype.checkValueDate=function(callback){
             }
 
             //var datastr=date.getFullYear()+"-"+(date.getMonth()+1)+"-"+date.getDate();
-            dbsuport.getcodeface("000001",str,function(err,result){
+            dbsuport.getcodeface(global.shcode,str,function(err,result){
                 callback(null,result!=null&&result.state);
             })
         });
@@ -291,8 +291,7 @@ DataMeeter.prototype.getAllCodeValues=function(codes){
         }
         if(usu){
             dbsuport.updatacodeface({
-                _id:"000001_"+global.datestr,
-                no:"000001",
+                no:global.shcode,
                 state:1,
                 date:global.datestr
             },function(err,r){
@@ -350,7 +349,7 @@ DataMeeter.prototype.startwork=function(){
                 var codes=[];
                 if(allno&&allno.length>0){
                     for(var i in allno){
-                        if(allno[i].state||allno[i].no=="000001"||allno[i].no=="1000001")allno[i].save=true;
+                        if(allno[i].state||allno[i].no==global.shcode||allno[i].no=="1000001")allno[i].save=true;
                         else codes.push(allno[i]);
                     }
                 }

@@ -10,10 +10,10 @@ var nohelper = require('./nohelper.js');
 var dbsuport = require('./MYSQLDBSuport.js');
 var analyser = require('./dataAnalyser.js');
 var tool = require('./tools.js');
+var xls_tool = require('./xlstool.js');
 var  process = require('process');
 var url=require("url");
 var zlib = require('zlib');
-var xls=require('xls-to-json');
 var fs= require('fs');
 var request=require('request');
 var cluster = require('cluster');
@@ -82,7 +82,7 @@ DataMeeter.prototype.checkValueDate=function(callback){
             }
 
             //var datastr=date.getFullYear()+"-"+(date.getMonth()+1)+"-"+date.getDate();
-            dbsuport.getcodeface("000001",str,function(err,result){
+            dbsuport.getcodeface(global.shcode,str,function(err,result){
                 callback(null,result!=null&&result.state);
             })
         });
@@ -91,14 +91,6 @@ DataMeeter.prototype.checkValueDate=function(callback){
 
 
 
-}
-
-DataMeeter.prototype.downCodeFile=function(item,callback){
-    url="http://quotes.money.163.com/cjmx/2017/20170126/1000651.xls";
-    var stream = fs.createWriteStream("./datafiles/1000651.xls");
-    request(url).pipe(stream).on('close', function(err,result){
-
-    });
 }
 
 DataMeeter.prototype.readDataFile=function(){
@@ -111,17 +103,7 @@ DataMeeter.prototype.readDataFile=function(){
 return;
 
     fs.createReadStream('file.json').pipe(request.put('http://mysite.com/obj.json'))
-    xls({
-        input: "./datafiles/0601668.xls",  // input xls
-        output: "./datafiles/output.json", // output json
-        sheet: "0601668_成交明细_2017-01-25"  // specific sheetname
-    }, function(err, result) {
-        if(err) {
-            console.error(err);
-        } else {
-            console.log(result);
-        }
-    });
+
 
     //xls.open('./datafiles/sh600837_20170124.xls',function(err,sheet){
 
@@ -211,7 +193,7 @@ DataMeeter.prototype.getQueryDates=function(callback){
             return;
         }
         async.mapLimit(dates,1,function(d,cb){
-            dbsuport.getfaces({no:1,date:d},function(err,items){
+            dbsuport.getfaces({no:global.shcode,date:d},function(err,items){
                 if(items==null||items.length==0)date.push(d);
                 cb(null,1);
             });
@@ -222,156 +204,98 @@ DataMeeter.prototype.getQueryDates=function(callback){
     });
 }
 
-DataMeeter.prototype.getValuesByNo=function(item,allcallback){
-
-    var index=0;
-    for(var i in global.curCodes){
-        if(global.curCodes[i].no==item.no){
-            index=i;
-            break;
-        }
-    }
-
-     if(item.tag.save){
-            allcallback(null,item);
-           module.exports.console("index:"+index+","+ item.no+" has saved");
+DataMeeter.prototype.saveToDb=function(item,allcallback){
+    dbsuport.getcodeface(item.no,item.date,function(err,face){
+        if(face&&face.state){
+            module.exports.console(item.no+ ": 已保存");
+            allcallback(0,0);
             return;
         }
 
-        var allurls=  module.exports.getUrlsByCode(item.no);
-        async.mapLimit(allurls,2,function(codeurl,callback){
-            var  longstr="";
-            var options ={
-                hostname: 'quotes.money.163.com',
-                //hostname: '123.126.66.66',
-                port: 80,
-                method: 'GET',
-                path:codeurl,
-                timeout:20000,
-                headers: {
-                    'Connection':'keep-alive',
-                    'Upgrade-Insecure-Requests': '1',
-                    'User-Agent':' Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.99 Safari/537.36',
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                    'Accept-Encoding': 'gzip, deflate, sdch',
-                    'Accept-Language':'zh-CN,zh;q=0.8'
-                }
-            };
-
-           var rquest= http.get(options,function(res){
-                var length=0;
-                var chunks=[];
-               res.on("aborted",function(){
-
-               })
-                res.on('data', function (chunk) {
-                    length+=chunk.length;
-                    chunks.push(chunk);
-                });
-                res.on('end', function (str) {
-                    //consoleTimes("h查询");
-                    if(item==null||item.data==null)return;
-                    var buf=Buffer.concat(chunks, length);
-                    zlib.gunzip(buf, function (err, decoded) {
-                        if(item==null||item.data==null)return;
-                        try {
-                            var temp=JSON.parse(decoded.toString().toLowerCase());
-                        }catch(er) {
-                            module.exports.console("index:"+index+","+ item.no+" 数据获取失败");
-                            callback(codeurl,0);
-                            return;
-                        }
-
-                        for(var i=0;i<temp.zhubi_list.length;i++){
-                            item.data.set(temp.zhubi_list[i].date.sec, {
-                                _id:item.no+"_"+temp.zhubi_list[i].date.sec,
-                                no:item.no,
-                                time:temp.zhubi_list[i].date.sec,
-                                price:temp.zhubi_list[i].price,
-                                trade_type:temp.zhubi_list[i].trade_type,
-                                turnover_inc:temp.zhubi_list[i].turnover_inc,
-                                volume:temp.zhubi_list[i].volume_inc
-                            });
-
-                            item.min=Math.min(item.min,temp.zhubi_list[i].price);
-                            item.max=Math.max(item.max,temp.zhubi_list[i].price);
-                        }
-
-                        callback(0,1);
-
-                    });
-                });
-            }).on("error",function(a,b){
-               callback(codeurl,0);
-               //module.exports.console("请求出错 ");
-               module.exports.console("index:"+index+","+ item.no+" 请求出错");
-            }).on('timeout',function(e){
-
-               rquest.abort();
-              // callback(1,null);
-               //console.log(codeurl)
-               module.exports.console("index:"+index+","+ item.no+" 请求超时");
-           });
-            rquest.setTimeout(20000,function(a,b){
-
-           });
-        },function(err,results){
-
-            var su=0;
-             for (i in results) if(!results[i])
-                su+=1;
-
-            if(su>0){
-                module.exports.console("err");
-            }
-
-            if(su){
-                module.exports.console("index:"+index+","+ item.no+" 保存失败");
-                allcallback(0,false);
+        module.exports.getValuesFromfile(item,function(err,items){
+            if(err){
+                module.exports.console(item.no+ ": 获取文件数据失败");
+                allcallback(0,0);
                 return;
             }
-            //consoleTimes("查询");
-            var count=0;
-            for(var i=0;i<results.length;i++){
-                count+=results[0];
-            }
 
-            var allvalues=item.data.values();
-            dbsuport.saveTimePrice(allvalues,function(err,result){
+            dbsuport.saveTimePrice(items,function(err,result){
                 if(err){
-                    module.exports.console("index:"+index+","+ item.no+" 保存失败");
+                    module.exports.console( item.no+" 保存失败");
+                    allcallback(0,1);
                 }
                 else {
-                    module.exports.console("index:"+index+","+ item.no+" 保存成功;" +allvalues.length);
-                }
-                if(allvalues.length){
-                    var face={
-                        _id:item.no+"_"+global.datestr,
-                        no:item.no,
-                        date:global.datestr,
-                        _min:Math.floor(item.min*100),
-                        _max:Math.floor(item.max*100) ,
-                        state:1
-                    };
+                    module.exports.console( item.no+" 保存成功");
+                    if(items.length){
+                        var face={
+                            _id:item.no+"_"+item.date,
+                            no:item.no,
+                            date:item.date,
+                            lastprice:item.lastprice,
+                            _min:Math.floor(item.min*100),
+                            _max:Math.floor(item.max*100) ,
+                            state:1
+                        };
 
-                    dbsuport.updatacodeface(face,function(err,s){
-                        global.curCodes[index].save=true;
-                        module.exports.console(index+"/"+global.curCodes.length);
-
-                        item.data=null;
+                        dbsuport.updatacodeface(face,function(err,s){
+                            allcallback(0,true);
+                        });
+                    }
+                    else {
                         allcallback(0,true);
-                    });
+                    }
                 }
-                else {
-                    global.curCodes[index].save=true;
-                    module.exports.console(index+"/"+global.curCodes.length);
 
-                    item.data=null;
-                    allcallback(0,true);
-                }
 
             });
-        });
+        })
+    })
+}
+
+DataMeeter.prototype.getValuesFromfile=function(item,allcallback){
+    if(!(item.no&&item.date)){
+        allcallback(null,null);
+        return;
+    }
+    var file='./datafiles/'+item.date+"_"+item.no+".xls";
+    fs.exists(file,function(exist){
+        if(exist){
+
+            xls_tool({
+                input: file,
+            }, function(err, result) {
+                if(err) {
+                    console.error(err);
+                } else {
+                    var items=[];
+                    item.max=0;
+                    item.min=999999;
+                    result.forEach(function(row,index){
+                        var time=new Date(item.date+" "+row[1]).getTime()/1000;
+                        var t_type=0;
+                        if(row[0]=="买盘") t_type=1;
+                        if(row[0]=="卖盘") t_type=-1;
+                        item.max=Math.max(item.max,row[2]);
+                        item.min=Math.min(item.min,row[2]);
+                        items.push({
+                                _id:item.no+"_"+time,
+                                no:item.no,
+                                time:time,
+                                price:row[2],
+                                trade_type:t_type,
+                                turnover_inc:row[5],
+                                volume:row[4]
+                        })
+                    })
+                    item.lastprice=items[items.length-1].price;
+                    allcallback(0,items)
+                }
+            });
+        }
+        else {
+            allcallback(1,null);
+        }
+    })
 }
 
 var total=0;
@@ -425,8 +349,8 @@ DataMeeter.prototype.getAllCodeValues=function(codes){
         }
         if(usu){
             dbsuport.updatacodeface({
-                _id:"000001_"+global.datestr,
-                no:"000001",
+                _id:global.shcode+"_"+global.datestr,
+                no:global.shcode,
                 state:1,
                 date:global.datestr
             },function(err,r){
@@ -463,6 +387,11 @@ DataMeeter.prototype.getFace=function(item){
 }
 
 DataMeeter.prototype.console=function(item){
+    if(!cluster.isMaster){
+        module.exports.child_sendMsg(item,"console");
+        return;
+    }
+
     if(process.send)
      process.send(item);
     else
@@ -486,12 +415,24 @@ DataMeeter.prototype.startwork=function(){
     });
 }
 
+DataMeeter.prototype.child_sendMsg=function(msg,type){
+    process.send(JSON.stringify({
+        id:module.exports.child_id,
+        type:type,
+        msg:msg
+    }));
+}
+
 DataMeeter.prototype.isWorking=null;
 DataMeeter.prototype.progress=[];
 DataMeeter.prototype.child_id="";
 DataMeeter.prototype.child_free=true;
 DataMeeter.prototype.start=function(){
 
+    //module.exports.saveToDb({no:'000166',date:"2017-01-26"},function(err,items){
+    //
+    //})
+    //return;
     if(cluster.isMaster){
         module.exports.isWorking=true;
 
@@ -500,8 +441,8 @@ DataMeeter.prototype.start=function(){
             module.exports.startwork();
         },180000)
 
-        module.exports.startwork();
-return;
+       // module.exports.startwork();
+
         for (var i = 0; i < childProgresscount; i++) {
             var tempfork= cluster.fork()
             tempfork.on("message",function(msg){
@@ -512,10 +453,15 @@ return;
                 else  if(msg.type=="handled"){
 
                 }
+                else  if(msg.type=="console"){
+                    module.exports.console(msg.msg);
+                }
             })
             module.exports.progress.push({id:i,worker:tempfork,free:false}) ;//启动子进程
             tempfork.send({type:'id',id:i});
         }
+
+        return;
     }
 
 
@@ -523,6 +469,7 @@ return;
         msg=JSON.parse(msg);
         if(msg.type=="id"){
             module.exports.child_id=msg.id;
+            module.exports.console("id:"+msg.id);
         }
         else if(msg.type=="items"){
 

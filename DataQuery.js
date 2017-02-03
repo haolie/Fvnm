@@ -43,7 +43,7 @@ vm.prototype.onfacequalityQuery=function(req,res,query){
     var sper=0.015;
     if(query.day) num=query.day;
 
-    module.exports.getafterdays(query.date,'000001',function(err,dates){
+    module.exports.getafterdays(query.date,global.shcode,function(err,dates){
         if(dates.length){
             var curdate=dates[dates.length-1];
             if(dates.length>num)curdate=dates[num-1];
