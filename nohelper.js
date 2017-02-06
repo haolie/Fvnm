@@ -66,7 +66,9 @@ nohelper.prototype.getno=function(index,callback){
 
         resp.on("end",function(){
             var buf=Buffer.concat(chunks,length);
+            console.log(buf.toString())
             var temp=JSON.parse(buf.toString().toLowerCase());
+
             var result=[];
             for(var i=0;i<temp.result.length;i++){
                 if(temp.result[i][5]=="--") continue;
@@ -130,7 +132,7 @@ nohelper.prototype.savenofile=function(items,callback){
 }
 
 nohelper.prototype.getwebDates=function(start,callback){
-    start="2017-01-20";
+    start="2017-01-21";
     var uri="http://quotes.money.163.com/service/chddata.html?code=0000001&start=" +
         new Date(start).toLocaleDateString().replace(/-/g,"")+
         "&end=" +
@@ -143,7 +145,7 @@ nohelper.prototype.getwebDates=function(start,callback){
         fs.readFile(file, function (err,bytesRead) {
             var dates=[];
             var strs= bytesRead.toString("utf8").split("\r\n");
-            for (var i=1;i<strs.length;i++){
+            for (var i=strs.length-1;i>=0;i--){
                 var temp=strs[i].split(',');
                 if(temp.length>2) dates.push(temp[0]);
             }
