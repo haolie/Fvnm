@@ -15,7 +15,7 @@ var zlib = require('zlib');
 var fs= require('fs');
 var fork = require('child_process').fork;
 var request=require('request');
-var childProgresscount=2;
+var childProgresscount=3;
 
 //
 var tempCodes=['300207','600313','600510'];
@@ -111,6 +111,8 @@ DataMeeter.prototype.dataContext={
     }
 }
 
+DataMeeter.prototype.dateItems=[];
+
 DataMeeter.prototype.downDateFiles=function(date,callback){
     nohelper.getallno(date,function(err,codes){
         if(err){
@@ -118,11 +120,13 @@ DataMeeter.prototype.downDateFiles=function(date,callback){
             return;
         }
 
-        async.mapLimit(codes,4,function(item,mapcb){
+        var dateitem={date:date,items:codes};
+        module.exports.dateItems.push(dateitem);
+        async.mapLimit(dateitem.items,4,function(item,mapcb){
             var file="./datafiles/"+date+"_"+item.no +".xls";
             fs.exists(file,function(exist){
                 if(exist){
-                    module.exports.console("exist："+item.no);
+                    module.exports.console("exist："+item.no + "  "+ item.index+"/"+dateitem.items.length);
                     item.savestate=0;
                     item.file=file;
                     item.trytimes=0;
@@ -139,7 +143,7 @@ DataMeeter.prototype.downDateFiles=function(date,callback){
                     url+= item.no +".xls";
                     var stream = fs.createWriteStream(file);
                     request(url).pipe(stream).on('close', function(err,result){
-                        module.exports.console("下载成功："+file);
+                        module.exports.console("下载成功："+file+"  "+ item.index+"/"+dateitem.items.length);
                         item.savestate=0;
                         item.file=file;
                         item.trytimes=0;
@@ -155,6 +159,7 @@ DataMeeter.prototype.downDateFiles=function(date,callback){
 }
 
 DataMeeter.prototype.startFiledown=function(callback){
+    module.exports.dataItems=[];
     module.exports.getQueryDates(function(err,dates){
         if(dates==null||dates.length==0){
             callback(null,1)
@@ -189,7 +194,45 @@ DataMeeter.prototype.getQueryDates=function(callback){
     });
 }
 
+DataMeeter.prototype.commitDateItems=function(){
+    if(module.exports.dateItems==null||module.exports.dateItems.length==0){
+        return;
+    }
 
+    module.exports.dateItems.forEach(function(date,index){
+        if(date.items&&date.items.length>0)
+        module.exports.console(JSON.stringify(date.items[1]))
+        for(var i in date.items){
+            if(date.items[i].savestate!=2) {
+                module.exports.console("        ")
+                module.exports.console("        ")
+                module.exports.console("        ")
+                module.exports.console(date.date);
+                module.exports.console(i);
+                module.exports.console("        ")
+                module.exports.console("        ")
+                module.exports.console("        ")
+                return;
+            }
+        }
+        module.exports.console("________")
+        module.exports.console("________")
+        module.exports.console("________")
+        module.exports.console(date.date);
+        module.exports.console("________")
+        module.exports.console("________")
+        module.exports.console("________")
+        dbsuport.updatacodeface({
+            no:global.shcode,
+            state:1,
+            date:date.date
+        },function(err,r){
+            //analyser.startworker();
+            module.exports.console(date.date+ " has save completed");
+        });
+    })
+
+}
 
 var total=0;
 var cur=0;
@@ -290,6 +333,11 @@ DataMeeter.prototype.startwork=function(){
             return;
         }
 
+        //module.exports.dataContext.finished=false;
+        //module.exports.dataContext.items=[];
+        //module.exports.dataContext.index=0;
+
+
         module.exports.console("start data meet");
         var downCall=function(err,dates){
             if(err){
@@ -297,6 +345,7 @@ DataMeeter.prototype.startwork=function(){
             }
             else {
                 module.exports.console("downFinished");
+                module.exports.commitDateItems();
                 module.exports.isWorking=false;
             }
         }
@@ -315,7 +364,7 @@ DataMeeter.prototype.startChildWorker=function(){
     for (var i = 0; i < childProgresscount; i++) {
         var tempfork= fork("DataMeeter_worker.js")
         tempfork.on("message",function(msg,b){
-            console.log(msg);
+           // console.log(msg);
                 msg=JSON.parse(msg);
                 if(msg.type=="state"){
                     module.exports.progress.forEach(function(p,index){
@@ -325,19 +374,21 @@ DataMeeter.prototype.startChildWorker=function(){
                     })
                 }
                 else  if(msg.type=="result"){
-
+                    //module.exports.console(JSON.stringify(msg));
                     var tm= module.exports.dataContext.items[msg.msg.index];
-
-                    if(msg.msg.result) tm.trytimes+=1;
-                    if(tm.trytimes>=3)msg.savestate=4;
-                    else msg.savestate=0;
+                    tm.savestate=2
+                    if(msg.msg.result){
+                        tm.trytimes+=1;
+                        if(tm.trytimes>=3)msg.savestate=4;
+                        else msg.savestate=0;
+                    }
                     module.exports.progress.forEach(function(p,index){
                         if(p.worker.pid==msg.id){
                             module.exports.sendWorker(p);
                         }
                     })
                     var ts=" 保存成功"; if(msg.msg.result)ts=" 保存失败 times "+tm.trytimes;
-                    module.exports.console(tm.date+tm.no+ ts);
+                    module.exports.console(tm.date+" "+tm.no+ ts +" "+tm.index);
                 }
                 else  if(msg.type=="console"){
                     module.exports.console(msg.msg);
@@ -375,6 +426,14 @@ DataMeeter.prototype.start=function() {
                 if(p.state=="free") module.exports.sendWorker(p);
             })
         }, 1000)
+
+    setInterval(function () {
+        if(module.exports.dataContext.finished) return;
+        module.exports.commitDateItems();
+
+    }, 5000)
+
+
 
 
 }

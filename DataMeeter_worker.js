@@ -5,7 +5,8 @@ var async=require("async");
 var nohelper = require('./nohelper.js');
 var dbsuport = require('./MYSQLDBSuport.js');
 var tool = require('./tools.js');
-var xls_tool = require('./xlstool.js');
+//var xls_tool = require('./xlstool.js');
+var xls_tool = require('xls-to-json');
 var  process = require('process');
 var fs= require('fs');
 
@@ -30,7 +31,7 @@ worker.prototype.saveToDb=function(item,allcallback){
     dbsuport.getcodeface(item.no,item.date,function(err,face){
         if(face&&face.state){
             module.exports.console(item.no+ ": 已保存");
-            allcallback(0,0);
+            allcallback(0,true);
             return;
         }
 
@@ -43,11 +44,11 @@ worker.prototype.saveToDb=function(item,allcallback){
 
             dbsuport.saveTimePrice(items,function(err,result){
                 if(err){
-                    module.exports.console( item.no+" 保存失败");
+                   // module.exports.console( item.no+" 保存失败");
                     allcallback(0,1);
                 }
                 else {
-                    module.exports.console( item.no+" 保存成功");
+                    //module.exports.console( item.no+" 保存成功");
                     if(items.length){
                         var face={
                             _id:item.no+"_"+item.date,
@@ -86,6 +87,7 @@ worker.prototype.getValuesFromfile=function(item,allcallback){
             try {
                 xls_tool({
                     input: file,
+                    output:null
                 }, function(err, result) {
                     if(err) {
                         console.error(err);
@@ -116,7 +118,8 @@ worker.prototype.getValuesFromfile=function(item,allcallback){
                 });
             }
             catch (ex){
-                fs.unlink(file);
+                //fs.unlink(file);
+                module.exports.console(ex.toString())
                 module.exports.console("删除文件："+file);
                 allcallback(2,null)
             }
@@ -130,7 +133,7 @@ worker.prototype.getValuesFromfile=function(item,allcallback){
 
 worker.prototype.start=function(){
     process.on("message",function(msg){
-        module.exports.console(msg);
+        //module.exports.console(msg);
         msg=JSON.parse(msg);
         var state="free";
         if(msg.type=="work"){

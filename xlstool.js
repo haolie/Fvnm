@@ -43,7 +43,7 @@ CV.prototype.cvjson = function(csv, output, callback) {
     var record = []
     var header = []
 
-    cvcsv()
+    new cvcsv
         .from.string(csv)
         .transform( function(row){
             row.unshift(row.pop());

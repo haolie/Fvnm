@@ -5,6 +5,10 @@ var util=require('util');
 var baseWorker=require('./BaseVMWorker');
 var http = require('http');
 
+var xls_tool = require('xls-to-json');
+var  process = require('process');
+var fs= require('fs');
+
 var advan=function(){
     //baseWorker.call(this);
 };
@@ -66,17 +70,45 @@ advan.prototype.ondatecheckQuery=function(res,callback){
 
 advan.prototype.start=function(){
 
-    http.createServer(function (req, res) {
 
-        res.writeHead(200, {'Content-Type': 'text/plain'});
-        var request=url.parse(req.url,true)
-        args= url.parse(req.url,true).query;
+    try {
+        xls_tool({
+            input: "./datafiles/2017-02-09_000581.xls",
+            output:null
+        }, function(err, result) {
+            if(err) {
+                console.error(err);
+            } else {
+                var items=[];
+                item.max=0;
+                item.min=999999;
+                result.forEach(function(row,index){
+                    var time=new Date(item.date+" "+row[1]).getTime()/1000;
+                    var t_type=0;
+                    if(row[0]=="买盘") t_type=1;
+                    if(row[0]=="卖盘") t_type=-1;
+                    item.max=Math.max(item.max,row[2]);
+                    item.min=Math.min(item.min,row[2]);
+                    items.push({
+                        _id:item.no+"_"+time,
+                        no:item.no,
+                        time:time,
+                        price:row[2],
+                        trade_type:t_type,
+                        turnover_inc:row[5],
+                        volume:row[4]
+                    })
+                })
+                item.lastprice=items[items.length-1].price;
+                allcallback(0,items)
+            }
+        });
+    }
+    catch (ex){
+        //fs.unlink(file);
+        console.log(ex.toString());
 
-        var fun=module.exports['on'+request.pathname.replace('/','')+'Query'];
-        if(fun)fun(req,res,request.query);
-        else res.end("not find!");
-
-    }).listen(12126);
+    }
 
 }
 

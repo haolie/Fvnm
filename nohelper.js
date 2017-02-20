@@ -38,6 +38,7 @@ nohelper.prototype.getallnofromweb=function(date,callback){
                 allcodes= allcodes.concat(results[i]);
             }
 
+
             callback(null,allcodes);
         })
 
@@ -66,7 +67,7 @@ nohelper.prototype.getno=function(index,callback){
 
         resp.on("end",function(){
             var buf=Buffer.concat(chunks,length);
-            console.log(buf.toString())
+            //console.log(buf.toString())
             var temp=JSON.parse(buf.toString().toLowerCase());
 
             var result=[];
@@ -75,9 +76,11 @@ nohelper.prototype.getno=function(index,callback){
                 var codestr=temp.result[i][0].toString();
                 codestr=codestr.replace(".sz","");
                 codestr=codestr.replace(".sh","");
+                if(temp.result[i][8]=='--')temp.result[i][8]=0;
                 result.push({no:codestr,
                     date:module.exports.currentDate,
                     state:0,
+                    index:i,
 
                     //lastprice:Number(temp.result[i][2])  ,//现价
                     dde:Number(temp.result[i][4])  ,//dde 尽量
@@ -132,7 +135,7 @@ nohelper.prototype.savenofile=function(items,callback){
 }
 
 nohelper.prototype.getwebDates=function(start,callback){
-    start="2017-01-21";
+   // start="2017-01-25";
     var uri="http://quotes.money.163.com/service/chddata.html?code=0000001&start=" +
         new Date(start).toLocaleDateString().replace(/-/g,"")+
         "&end=" +
@@ -145,7 +148,7 @@ nohelper.prototype.getwebDates=function(start,callback){
         fs.readFile(file, function (err,bytesRead) {
             var dates=[];
             var strs= bytesRead.toString("utf8").split("\r\n");
-            for (var i=strs.length-1;i>=0;i--){
+            for (var i=strs.length-1;i>=1;i--){
                 var temp=strs[i].split(',');
                 if(temp.length>2) dates.push(temp[0]);
             }
@@ -171,13 +174,21 @@ nohelper.prototype.getallnofromlocal=function(datestr, callback){
 nohelper.prototype.getallno=function(date,getallnocallback){
 
     dbsuport.getfaces({date:date},function(err,items){
-        if(err==null&&items&&items.length>0)
+        if(err==null&&items&&items.length>0){
+            for(var i=0;i<items.length;i++){
+                items[i].index=i;
+            }
+
             getallnocallback(err,items);
+        }
         else
         module.exports.getallnofromweb(date,function(err,items){
             if(err)getallnocallback("获取出错",null);
             else{
                 dbsuport.savecodefaces(items,function(err,result){
+                    for(var i=0;i<items.length;i++){
+                        items[i].index=i;
+                    }
                     getallnocallback(null,items);
                 })
             }
