@@ -112,13 +112,16 @@ worker.prototype.getValuesFromfile=function(item,allcallback){
                                 volume:row[4]
                             })
                         })
+						if(items.length>0)
                         item.lastprice=items[items.length-1].price;
+					    else item.lastprice=0;
+                        fs.unlink(file);
                         allcallback(0,items)
                     }
                 });
             }
             catch (ex){
-                //fs.unlink(file);
+                fs.unlink(file);
                 module.exports.console(ex.toString())
                 module.exports.console("删除文件："+file);
                 allcallback(2,null)

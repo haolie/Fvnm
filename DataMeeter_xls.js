@@ -94,6 +94,10 @@ DataMeeter.prototype.dataContext={
                         break;
                     }
                 }
+				
+				if(module.exports.isWorking)
+					return null;
+				
                 if(cur.index>=cur.items.length){
                     cur.finished=!module.exports.isWorking;
                     return null;
@@ -123,35 +127,45 @@ DataMeeter.prototype.downDateFiles=function(date,callback){
         var dateitem={date:date,items:codes};
         module.exports.dateItems.push(dateitem);
         async.mapLimit(dateitem.items,4,function(item,mapcb){
-            var file="./datafiles/"+date+"_"+item.no +".xls";
-            fs.exists(file,function(exist){
-                if(exist){
-                    module.exports.console("exist："+item.no + "  "+ item.index+"/"+dateitem.items.length);
-                    item.savestate=0;
-                    item.file=file;
-                    item.trytimes=0;
-                    module.exports.dataContext.items.push(item);
+            dbsuport.getcodeface(item.no,date,function(err,face){
+                if(face&&face.state){
+                    module.exports.console(item.no+ ": has saved,no need down");
+					item.savestate=2;
                     mapcb(null,0);
+                    return;
                 }
-                else {
-                    var datetime=new Date(date);
-                    url="http://quotes.money.163.com/cjmx/" +
-                        datetime.getFullYear() + "/" +
-                        datetime.toLocaleDateString().replace(/-/g,'') +"/";
-                    if(Number(item.no)>=600000)url+=0;
-                    else url+=1;
-                    url+= item.no +".xls";
-                    var stream = fs.createWriteStream(file);
-                    request(url).pipe(stream).on('close', function(err,result){
-                        module.exports.console("下载成功："+file+"  "+ item.index+"/"+dateitem.items.length);
+
+                var file="./datafiles/"+date+"_"+item.no +".xls";
+                fs.exists(file,function(exist){
+                    if(exist){
+                        module.exports.console("exist："+item.no + "  "+ item.index+"/"+dateitem.items.length);
                         item.savestate=0;
                         item.file=file;
                         item.trytimes=0;
                         module.exports.dataContext.items.push(item);
-                        mapcb(err,result);
-                    });
-                }
+                        mapcb(null,0);
+                    }
+                    else {
+                        var datetime=new Date(date);
+                        url="http://quotes.money.163.com/cjmx/" +
+                            datetime.getFullYear() + "/" +
+                            datetime.toLocaleDateString().replace(/-/g,'') +"/";
+                        if(Number(item.no)>=600000)url+=0;
+                        else url+=1;
+                        url+= item.no +".xls";
+                        var stream = fs.createWriteStream(file);
+                        request(url).pipe(stream).on('close', function(err,result){
+                            module.exports.console("下载成功："+file+"  "+ item.index+"/"+dateitem.items.length);
+                            item.savestate=0;
+                            item.file=file;
+                            item.trytimes=0;
+                            module.exports.dataContext.items.push(item);
+                            mapcb(err,result);
+                        });
+                    }
+                })
             })
+
         },function(err,result){
             callback(err,result);
         })
@@ -161,6 +175,7 @@ DataMeeter.prototype.downDateFiles=function(date,callback){
 DataMeeter.prototype.startFiledown=function(callback){
     module.exports.dataItems=[];
     module.exports.getQueryDates(function(err,dates){
+        //dates=["2017-01-19"];
         if(dates==null||dates.length==0){
             callback(null,1)
             return;
@@ -214,6 +229,8 @@ DataMeeter.prototype.commitDateItems=function(){
                 module.exports.console("        ")
                 return;
             }
+
+
         }
         module.exports.console("________")
         module.exports.console("________")
@@ -229,80 +246,19 @@ DataMeeter.prototype.commitDateItems=function(){
         },function(err,r){
             //analyser.startworker();
             module.exports.console(date.date+ " has save completed");
+            //
+            //for(var i in date.items){
+            //    fs.exists(date.items[i].file,function(exist){
+            //        if(exist)
+            //            fs.unlink(date.items[i].file);
+            //    });
+            //}
+
         });
     })
 
 }
 
-var total=0;
-var cur=0;
-var starttime;
-DataMeeter.prototype.getAllCodeValues=function(codes){
-    var list=[];
-    starttime=new Date();
-    var start=new Date();
-    start.setHours(9);
-    start.setMinutes(0);
-    start=Date.parse(start)/1000;
-
-    var end=new Date();
-    end.setHours(18);
-    end.setMinutes(0);
-    end=Date.parse(end)/1000;
-
-    for(var i=0;i<codes.length;i++){
-        list.push(
-            {
-                no:String(codes[i].no) ,
-                data:new hashmap(),
-                tag:codes[i],
-                start:start,
-                end:end,
-                min:10000,
-                max:-1
-            }
-        );
-    }
-
-    async.mapLimit(list,3,module.exports.getValuesByNo,function(err,results){
-        var date=new Date();
-        module.exports.console(global.datestr+" data save succeed")
-
-        var ms=new Date().valueOf()-starttime.valueOf();
-        var m=0;
-        var s=0;
-        s=Math.floor(ms/1000);
-        ms=Math.floor(ms%1000);
-        m=Math.floor(s/60);
-        s=Math.floor(s%60);
-
-        module.exports.console("耗时 "+m+":"+s+";"+ms);
-
-        var usu=0;
-        for(var i in results){
-            if(results[i])
-            usu+=1;
-        }
-        if(usu){
-            dbsuport.updatacodeface({
-                _id:global.shcode+"_"+global.datestr,
-                no:global.shcode,
-                state:1,
-                date:global.datestr
-            },function(err,r){
-                global.curCodes=null;
-                analyser.startworker();
-            });
-        }
-        else {
-            module.exports.console("失败："+usu);
-        }
-
-
-        module.exports.isWorking=false;
-
-    })
-}
 
 DataMeeter.prototype.consoleTimes=function(str){
     var ms=new Date().valueOf()-starttime.valueOf();
@@ -411,10 +367,10 @@ DataMeeter.prototype.start=function() {
 
         module.exports.isWorking = true;
 
-        setInterval(function () {
-            if (module.exports.isWorking) return;
-            module.exports.startwork();
-        }, 180000);
+        //setInterval(function () {
+        //    if (module.exports.isWorking) return;
+        //    module.exports.startwork();
+        //}, 180000);
          module.exports.startwork();
          module.exports.startChildWorker();
 
@@ -431,7 +387,7 @@ DataMeeter.prototype.start=function() {
         if(module.exports.dataContext.finished) return;
         module.exports.commitDateItems();
 
-    }, 5000)
+    }, 15000)
 
 
 
