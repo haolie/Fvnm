@@ -100,6 +100,7 @@ DataMeeter.prototype.dataContext={
 				
                 if(cur.index>=cur.items.length){
                     cur.finished=!module.exports.isWorking;
+                    if(cur.finished) module.exports.commitDateItems();
                     return null;
                 }
                 continue;
@@ -118,6 +119,8 @@ DataMeeter.prototype.dataContext={
 DataMeeter.prototype.dateItems=[];
 
 DataMeeter.prototype.downDateFiles=function(date,callback){
+    module.exports.console(date);
+
     nohelper.getallno(date,function(err,codes){
         if(err){
             callback(err,null);
@@ -160,14 +163,15 @@ DataMeeter.prototype.downDateFiles=function(date,callback){
                             item.file=file;
                             item.trytimes=0;
                             module.exports.dataContext.items.push(item);
-                            mapcb(err,result);
+                            mapcb(null,result);
                         });
                     }
                 })
             })
 
         },function(err,result){
-            callback(err,result);
+            module.exports.console(dateitem.date+"  finid");
+            callback(null,result);
         })
     });
 }
@@ -180,6 +184,10 @@ DataMeeter.prototype.startFiledown=function(callback){
             callback(null,1)
             return;
         }
+
+        dates.forEach(function(d,index){
+            module.exports.console(d);
+        })
         async.mapLimit(dates,1,module.exports.downDateFiles,function(err,result){
             callback(err,result)
         });
@@ -188,7 +196,7 @@ DataMeeter.prototype.startFiledown=function(callback){
 
 DataMeeter.prototype.getQueryDates=function(callback){
     var tempdate=new Date(global.datestr);
-     tempdate.add('d',-7);
+     tempdate.add('d',-10);
     tempdate=tempdate.toLocaleDateString();
     nohelper.getwebDates(tempdate,function(err,dates){
         var date=[];
@@ -197,6 +205,8 @@ DataMeeter.prototype.getQueryDates=function(callback){
             callback(null,date)
             return;
         }
+
+
         async.mapLimit(dates,1,function(d,cb){
             dbsuport.getfaces({no:global.shcode,date:d},function(err,items){
                 if(items==null||items.length==0)date.push(d);
@@ -216,21 +226,31 @@ DataMeeter.prototype.commitDateItems=function(){
 
     module.exports.dateItems.forEach(function(date,index){
         if(date.items&&date.items.length>0)
-        module.exports.console(JSON.stringify(date.items[1]))
+
+
+        date.downcount=0;
+        date.savecount=0;
         for(var i in date.items){
-            if(date.items[i].savestate!=2) {
-                module.exports.console("        ")
-                module.exports.console("        ")
-                module.exports.console("        ")
-                module.exports.console(date.date);
-                module.exports.console(i);
-                module.exports.console("        ")
-                module.exports.console("        ")
-                module.exports.console("        ")
-                return;
+            if(date.items[i].downstate>-1){
+                date.downcount++;
             }
+            else  if(date.items[i].savestate>1){
+                date.savecount++;
+            }
+        }
 
+        module.exports.console("________")
+        module.exports.console("________")
+        module.exports.console("________")
+        module.exports.console(date.date);
+        module.exports.console(date.downcount);
+        module.exports.console(date.savecount);
+        module.exports.console("________")
+        module.exports.console("________")
+        module.exports.console("________")
 
+        if(date.savecount<date.items.length-1){
+            return;
         }
         module.exports.console("________")
         module.exports.console("________")
@@ -284,10 +304,10 @@ DataMeeter.prototype.startwork=function(){
     module.exports.checkValueDate(function(err,result){
 
         module.exports.console("checkValueDate:"+result);
-        if(result) {
-            module.exports.isWorking=false;
-            return;
-        }
+        //if(result) {
+        //    module.exports.isWorking=false;
+        //    return;
+        //}
 
         //module.exports.dataContext.finished=false;
         //module.exports.dataContext.items=[];
@@ -313,47 +333,102 @@ DataMeeter.prototype.startwork=function(){
 DataMeeter.prototype.sendWorker=function(p){
     var work=module.exports.dataContext.getItem();
     if(work)work.savestate=1;
+    p.item=work;
     p.worker.send(JSON.stringify({type:"work",item:work}));
 };
 
-DataMeeter.prototype.startChildWorker=function(){
-    for (var i = 0; i < childProgresscount; i++) {
-        var tempfork= fork("DataMeeter_worker.js")
-        tempfork.on("message",function(msg,b){
-           // console.log(msg);
-                msg=JSON.parse(msg);
-                if(msg.type=="state"){
-                    module.exports.progress.forEach(function(p,index){
-                        if(p.worker.pid==msg.id){
-                            p.state=msg.msg;
-                        }
-                    })
-                }
-                else  if(msg.type=="result"){
-                    //module.exports.console(JSON.stringify(msg));
-                    var tm= module.exports.dataContext.items[msg.msg.index];
-                    tm.savestate=2
-                    if(msg.msg.result){
-                        tm.trytimes+=1;
-                        if(tm.trytimes>=3)msg.savestate=4;
-                        else msg.savestate=0;
-                    }
-                    module.exports.progress.forEach(function(p,index){
-                        if(p.worker.pid==msg.id){
-                            module.exports.sendWorker(p);
-                        }
-                    })
-                    var ts=" 保存成功"; if(msg.msg.result)ts=" 保存失败 times "+tm.trytimes;
-                    module.exports.console(tm.date+" "+tm.no+ ts +" "+tm.index);
-                }
-                else  if(msg.type=="console"){
-                    module.exports.console(msg.msg);
+
+DataMeeter.prototype.createChild=function(p){
+    if(p==undefined||p==null){
+        p={};
+        module.exports.progress.push(p) ;//启动子进程
+    }
+    p.state="working";
+    p.worker= fork("DataMeeter_worker.js")
+    p.worker.on("message",function(msg,b){
+        // console.log(msg);
+        msg=JSON.parse(msg);
+        if(msg.type=="state"){
+            module.exports.progress.forEach(function(p,index){
+                if(p.worker.pid==msg.id){
+                    p.state=msg.msg;
                 }
             })
+        }
+        else  if(msg.type=="result"){
+            //module.exports.console(JSON.stringify(msg));
+            var tm= module.exports.dataContext.items[msg.msg.index];
+            tm.savestate=2
+            if(msg.msg.result){
+                tm.trytimes+=1;
+                if(tm.trytimes>=3)msg.savestate=4;
+                else msg.savestate=0;
+            }
+            module.exports.progress.forEach(function(p,index){
+                if(p.worker.pid==msg.id){
+                    module.exports.sendWorker(p);
+                }
+            })
+            var ts=" 保存成功"; if(msg.msg.result)ts=" 保存失败 times "+tm.trytimes;
+            module.exports.console(tm.date+" "+tm.no+ ts +" "+tm.index);
+        }
+        else  if(msg.type=="console"){
+            module.exports.console(msg.msg);
+        }
+    });
+    p.worker.on("create",function(){
+        p.state="free";
+    })
+    p.worker.on("exit",function(){
+        if(p.item){
+            fs.unlink(p.item.file);
+            p.item.savestate=0;
+        }
+        p.worker.kill();
+        p.worker=null;
+        module.exports.createChild(p);
+    });
+
+}
+
+DataMeeter.prototype.startChildWorker=function(){
+    for (var i = 0; i < childProgresscount; i++) {
+        module.exports.createChild();continue;
+        var tempfork= fork("DataMeeter_worker.js")
+        tempfork.on("message",function(msg,b){
+            // console.log(msg);
+            msg=JSON.parse(msg);
+            if(msg.type=="state"){
+                module.exports.progress.forEach(function(p,index){
+                    if(p.worker.pid==msg.id){
+                        p.state=msg.msg;
+                    }
+                })
+            }
+            else  if(msg.type=="result"){
+                //module.exports.console(JSON.stringify(msg));
+                var tm= module.exports.dataContext.items[msg.msg.index];
+                tm.savestate=2
+                if(msg.msg.result){
+                    tm.trytimes+=1;
+                    if(tm.trytimes>=3)msg.savestate=4;
+                    else msg.savestate=0;
+                }
+                module.exports.progress.forEach(function(p,index){
+                    if(p.worker.pid==msg.id){
+                        module.exports.sendWorker(p);
+                    }
+                })
+                var ts=" 保存成功"; if(msg.msg.result)ts=" 保存失败 times "+tm.trytimes;
+                module.exports.console(tm.date+" "+tm.no+ ts +" "+tm.index);
+            }
+            else  if(msg.type=="console"){
+                module.exports.console(msg.msg);
+            }
+        })
         module.exports.progress.push({worker:tempfork,state:"free"}) ;//启动子进程
+
     }
-
-
 }
 
 DataMeeter.prototype.isWorking=null;
@@ -373,8 +448,8 @@ DataMeeter.prototype.start=function() {
         //}, 180000);
          module.exports.startwork();
          module.exports.startChildWorker();
-
-
+        //
+        //
         setInterval(function () {
             if(module.exports.dataContext.finished) return;
 
@@ -383,11 +458,17 @@ DataMeeter.prototype.start=function() {
             })
         }, 1000)
 
-    setInterval(function () {
-        if(module.exports.dataContext.finished) return;
-        module.exports.commitDateItems();
-
-    }, 15000)
+    //setInterval(function () {
+    //    module.exports.console("finished");
+    //    module.exports.console("finished");
+    //    module.exports.console("finished");
+    //    module.exports.console("finished");
+    //    module.exports.console(module.exports.dataContext.finished);
+    //
+    //    if(module.exports.dataContext.finished) return;
+    //    module.exports.commitDateItems();
+    //
+    //}, 20000)
 
 
 

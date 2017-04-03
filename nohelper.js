@@ -177,6 +177,7 @@ nohelper.prototype.getallno=function(date,getallnocallback){
         if(err==null&&items&&items.length>0){
             for(var i=0;i<items.length;i++){
                 items[i].index=i;
+                items[i].savestate=-1;
             }
 
             getallnocallback(err,items);
@@ -188,6 +189,7 @@ nohelper.prototype.getallno=function(date,getallnocallback){
                 dbsuport.savecodefaces(items,function(err,result){
                     for(var i=0;i<items.length;i++){
                         items[i].index=i;
+                        items[i].savestate=-1;
                     }
                     getallnocallback(null,items);
                 })
