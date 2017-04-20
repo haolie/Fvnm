@@ -177,6 +177,7 @@ DataMeeter.prototype.downDateFiles=function(date,callback){
 }
 
 DataMeeter.prototype.startFiledown=function(callback){
+    module.exports.isdowning=true;
     module.exports.dataItems=[];
     module.exports.getQueryDates(function(err,dates){
         //dates=["2017-01-19"];
@@ -189,7 +190,8 @@ DataMeeter.prototype.startFiledown=function(callback){
             module.exports.console(d);
         })
         async.mapLimit(dates,1,module.exports.downDateFiles,function(err,result){
-            callback(err,result)
+            callback(err,result);
+            module.exports.isdowning=false;
         });
     });
 }
@@ -220,14 +222,12 @@ DataMeeter.prototype.getQueryDates=function(callback){
 }
 
 DataMeeter.prototype.commitDateItems=function(){
-    if(module.exports.dateItems==null||module.exports.dateItems.length==0){
+    if(!module.exports.isWorking|| module.exports.dateItems==null||module.exports.dateItems.length==0){
         return;
     }
 
-    module.exports.dateItems.forEach(function(date,index){
-        if(date.items&&date.items.length>0)
-
-
+    async.mapLimit(module.exports.dateItems,1,function(date,cb){
+        if(!date.items||!date.items.length) cb(null,false);
         date.downcount=0;
         date.savecount=0;
         for(var i in date.items){
@@ -239,44 +239,31 @@ DataMeeter.prototype.commitDateItems=function(){
             }
         }
 
-        module.exports.console("________")
-        module.exports.console("________")
-        module.exports.console("________")
-        module.exports.console(date.date);
-        module.exports.console(date.downcount);
-        module.exports.console(date.savecount);
-        module.exports.console("________")
-        module.exports.console("________")
-        module.exports.console("________")
-
         if(date.savecount<date.items.length-1){
+            cb(null,false);
             return;
         }
-        module.exports.console("________")
-        module.exports.console("________")
-        module.exports.console("________")
-        module.exports.console(date.date);
-        module.exports.console("________")
-        module.exports.console("________")
-        module.exports.console("________")
+
         dbsuport.updatacodeface({
             no:global.shcode,
             state:1,
             date:date.date
         },function(err,r){
-            //analyser.startworker();
+            cb(null,true);
             module.exports.console(date.date+ " has save completed");
-            //
-            //for(var i in date.items){
-            //    fs.exists(date.items[i].file,function(exist){
-            //        if(exist)
-            //            fs.unlink(date.items[i].file);
-            //    });
-            //}
-
         });
-    })
 
+    },function(err,results){
+
+        if(module.exports.isdowning) return;
+
+        var finished=true;
+        for(var i in results){
+            finished&=results[i];
+        }
+        if(finished) module.exports.isWorking=false;
+
+    });
 }
 
 
@@ -431,6 +418,7 @@ DataMeeter.prototype.startChildWorker=function(){
     }
 }
 
+DataMeeter.prototype.isdowning=false;
 DataMeeter.prototype.isWorking=null;
 DataMeeter.prototype.progress=[];
 DataMeeter.prototype.start=function() {
@@ -458,17 +446,11 @@ DataMeeter.prototype.start=function() {
             })
         }, 1000)
 
-    //setInterval(function () {
-    //    module.exports.console("finished");
-    //    module.exports.console("finished");
-    //    module.exports.console("finished");
-    //    module.exports.console("finished");
-    //    module.exports.console(module.exports.dataContext.finished);
-    //
-    //    if(module.exports.dataContext.finished) return;
-    //    module.exports.commitDateItems();
-    //
-    //}, 20000)
+    setInterval(function () {
+        if(!module.exports.isWorking) return;
+        module.exports.commitDateItems();
+
+    }, 20000)
 
 
 
@@ -478,13 +460,4 @@ DataMeeter.prototype.start=function() {
 module.exports=new DataMeeter();
 module.exports.start();
 
-
-//http.createServer(function(req, res){
-//
-//}).listen(8080);
-
-
-
-//getAllCodeValues(["000002"]);
-//getValuesByNo({no:'603018',data:new hashmap()});
 
