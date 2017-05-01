@@ -3,7 +3,7 @@
  */
 var http = require('http');
 var async=require("async");
-var percount=70;
+var percount=50;
 var token="";
 var fs= require('fs');
 var path = require('path');

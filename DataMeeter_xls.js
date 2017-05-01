@@ -88,6 +88,8 @@ DataMeeter.prototype.dataContext={
             }
 
             if(cur.index>=cur.items.length){
+                if(module.exports.isdowning) return null;
+
                 for(var i=0;i<cur.items.length;i++){
                     if(cur.items[i].savestate==0){//0:未处理；1：处理中；2：已处理
                         cur.index=i;
@@ -157,13 +159,48 @@ DataMeeter.prototype.downDateFiles=function(date,callback){
                         else url+=1;
                         url+= item.no +".xls";
                         var stream = fs.createWriteStream(file);
-                        request(url).pipe(stream).on('close', function(err,result){
+                        request.get(url,{timeout:15000},function(err){
+                            if(err){
+                                module.exports.console("下载成功失败失败");
+                                module.exports.console("下载成功失败失败");
+                                module.exports.console("下载成功失败失败");
+                                module.exports.console("下载成功失败失败");
+                                module.exports.console("下载成功失败失败");
+                                module.exports.console("下载成功失败失败");
+                                module.exports.console("下载成功失败失败");
+                                module.exports.console("下载成功失败失败");
+                                module.exports.console("下载成功失败失败");
+                                module.exports.console("下载成功失败失败");
+                                item.savestate=-1;
+                                mapcb(null,0);
+
+                                fs.exists(file,function(exist){
+                                    if(exist) fs.unlink(file);
+                                });
+                            }
+
+                        }).on("error",function(){
+
+                        }).pipe(stream).on('close', function(err,result){
+                        //request(url).pipe(stream).on('close', function(err,result){
+                            stream.end();
+                            if(err){
+                                item.savestate=-1;
+                                mapcb(null,result);
+
+                                fs.exists(file,function(exist){
+                                   if(exist) fs.unlink(file);
+                                });
+                                return;
+                            }
                             module.exports.console("下载成功："+file+"  "+ item.index+"/"+dateitem.items.length);
                             item.savestate=0;
                             item.file=file;
                             item.trytimes=0;
                             module.exports.dataContext.items.push(item);
                             mapcb(null,result);
+                        }).on("error",function (){
+
                         });
                     }
                 })
@@ -180,7 +217,7 @@ DataMeeter.prototype.startFiledown=function(callback){
     module.exports.isdowning=true;
     module.exports.dataItems=[];
     module.exports.getQueryDates(function(err,dates){
-        //dates=["2017-01-19"];
+       // dates=["2017-04-17","2017-04-18","2017-04-19","2017-04-20","2017-04-21"];
         if(dates==null||dates.length==0){
             callback(null,1)
             return;
@@ -198,7 +235,7 @@ DataMeeter.prototype.startFiledown=function(callback){
 
 DataMeeter.prototype.getQueryDates=function(callback){
     var tempdate=new Date(global.datestr);
-     tempdate.add('d',-10);
+     tempdate.add('d',-30);
     tempdate=tempdate.toLocaleDateString();
     nohelper.getwebDates(tempdate,function(err,dates){
         var date=[];
@@ -435,7 +472,7 @@ DataMeeter.prototype.start=function() {
         //    module.exports.startwork();
         //}, 180000);
          module.exports.startwork();
-         module.exports.startChildWorker();
+        module.exports.startChildWorker();
         //
         //
         setInterval(function () {
@@ -450,7 +487,7 @@ DataMeeter.prototype.start=function() {
         if(!module.exports.isWorking) return;
         module.exports.commitDateItems();
 
-    }, 20000)
+    }, 30000)
 
 
 
