@@ -9,7 +9,7 @@ var fs= require('fs');
 var path = require('path');
 var dbsuport = require('./MYSQLDBSuport.js');
 var request=require('request');
-var querylimit=8;
+var querylimit=1;
 
 var nohelper=function Nohelper(){}
 
@@ -90,7 +90,9 @@ nohelper.prototype.getno=function(index,callback){
                     ud:Number(temp.result[i][5]) });//涨跌 （元）
 
             }
-            if(callback)(callback(null,result));
+            if(callback)
+            setTimeout(callback(null,result),500)
+
         })
     })
 }
@@ -174,10 +176,13 @@ nohelper.prototype.getallnofromlocal=function(datestr, callback){
 nohelper.prototype.getallno=function(date,getallnocallback){
 
     dbsuport.getfaces({date:date},function(err,items){
+        var temps=[];
         if(err==null&&items&&items.length>0){
             for(var i=0;i<items.length;i++){
+                if(temps.no==global.shcode) continue;
                 items[i].index=i;
                 items[i].savestate=-1;
+                temps.push(items[i]);
             }
 
             getallnocallback(err,items);

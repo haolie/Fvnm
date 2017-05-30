@@ -131,10 +131,10 @@ DataMeeter.prototype.downDateFiles=function(date,callback){
 
         var dateitem={date:date,items:codes};
         module.exports.dateItems.push(dateitem);
-        async.mapLimit(dateitem.items,4,function(item,mapcb){
+        async.mapLimit(dateitem.items,2,function(item,mapcb){
             dbsuport.getcodeface(item.no,date,function(err,face){
                 if(face&&face.state){
-                    module.exports.console(item.no+ ": has saved,no need down");
+                   // module.exports.console(item.no+ ": has saved,no need down");
 					item.savestate=2;
                     mapcb(null,0);
                     return;
@@ -152,12 +152,17 @@ DataMeeter.prototype.downDateFiles=function(date,callback){
                     }
                     else {
                         var datetime=new Date(date);
-                        url="http://quotes.money.163.com/cjmx/" +
-                            datetime.getFullYear() + "/" +
-                            datetime.toLocaleDateString().replace(/-/g,'') +"/";
-                        if(Number(item.no)>=600000)url+=0;
-                        else url+=1;
-                        url+= item.no +".xls";
+                      //  http://stock.gtimg.cn/data/index.php?appn=detail&action=download&c=sz000819&d=20170522
+                        //url="http://quotes.money.163.com/cjmx/" +
+                        //    datetime.getFullYear() + "/" +
+                        //    datetime.toLocaleDateString().replace(/-/g,'') +"/";
+
+                            url="http://stock.gtimg.cn/data/index.php?appn=detail&action=download";
+                        var codestr="sz"+ item.no;
+                        if(Number(item.no)>=600000)codestr="sh"+ item.no;
+                        var datestr=date.replace('-','');
+                        datestr=datestr.replace('-','');
+                        url=url+"&c="+codestr+"&d="+datestr;
                         var stream = fs.createWriteStream(file);
                         request.get(url,{timeout:15000},function(err){
                             if(err){
@@ -180,7 +185,12 @@ DataMeeter.prototype.downDateFiles=function(date,callback){
                             }
 
                         }).on("error",function(){
-
+                            module.exports.console("下载成功失败失败");
+                            module.exports.console("下载成功失败失败");
+                            module.exports.console("下载成功失败失败");
+                            module.exports.console("下载成功失败失败");
+                            module.exports.console("下载成功失败失败");
+                            module.exports.console("下载成功失败失败");
                         }).pipe(stream).on('close', function(err,result){
                         //request(url).pipe(stream).on('close', function(err,result){
                             stream.end();
@@ -248,7 +258,7 @@ DataMeeter.prototype.getQueryDates=function(callback){
 
         async.mapLimit(dates,1,function(d,cb){
             dbsuport.getfaces({no:global.shcode,date:d},function(err,items){
-                if(items==null||items.length==0)date.push(d);
+                if(items==null||items.length==0||items[0].state==0)date.push(d);
                 cb(null,1);
             });
         },function(err,result){
@@ -271,12 +281,12 @@ DataMeeter.prototype.commitDateItems=function(){
             if(date.items[i].downstate>-1){
                 date.downcount++;
             }
-            else  if(date.items[i].savestate>1){
+            else  if(date.items[i].savestate==2){
                 date.savecount++;
             }
         }
 
-        if(date.savecount<date.items.length-1){
+        if(date.savecount<date.items.length){
             cb(null,false);
             return;
         }
@@ -484,8 +494,8 @@ DataMeeter.prototype.start=function() {
         }, 1000)
 
     setInterval(function () {
-        if(!module.exports.isWorking) return;
-        module.exports.commitDateItems();
+        //if(!module.exports.isWorking) return;
+        //module.exports.commitDateItems();
 
     }, 30000)
 

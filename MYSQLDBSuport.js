@@ -181,23 +181,33 @@ suporter.prototype.getfaces=function(item,callback){
 
     module.exports.getConnction(function(err, conn) {
         var str="SELECT * FROM codeface where ";
+        var filter="";
+
         var tempno;
-        if(item.date&&item.no){
+
+        if(item.no){
             var tempno=Number(item.no);
             if(tempno<1000000)tempno+=1000000;
-            str+="_no="+tempno;
-            str+=" and _date='"+item.date+"';";
-        }
-        else if(item.no){
-            var tempno=Number(item.no);
-            if(tempno<1000000)tempno+=1000000;
-            str+="_no="+tempno;
-        }
-        else if (item.date){
-            str+="_date='"+item.date+"';";
+            if(filter.length>0)filter+=" and "
+            filter+="_no="+tempno;
         }
 
+        if(item.date){
+            if(filter.length>0)filter+=" and "
+            filter+="_date='"+item.date+"';";
+        }
 
+        if(item.start){
+            if(filter.length>0)filter+="and "
+            filter+="_date>'"+item.start+"';";
+        }
+
+        if(item.end){
+            if(filter.length>0)filter+=" and "
+            filter+="_date<'"+item.end+"';";
+        }
+
+        str +=filter;
         conn.query(str,function(err,results){
            var items=module.exports.convertface(results);
             callback(err,items);
@@ -301,34 +311,31 @@ suporter.prototype.updatacodeface=function(item,callback){
 
 suporter.prototype.test=function(){
 
-module.exports.getfaces({date:'2017-01-04'},function(a,b){
+module.exports.getfaces({date:'2017-05-26'},function(a,b){
+
+
+
     module.exports.getConnction(function(err,conn){
-        {
-            async.mapLimit(b,1,function(item,mapcallback){
-                var str1="select * from time_price where "
-                module.exports.getValueByDayNo({no:Number(item.no)+1000000,date:"2017-01-04"},function(err,rs){
-                    for(var i in rs){
-                        console.log(rs[i].no)
-                        if(rs[i].no>2000000)
-                        rs[i].no=rs.no-1000000
-                      //  console.log(rs[i].no)
-                    }
 
-                    mapcallback(null,null);
-                })
+        var temp=0;
+        async.mapLimit(b,1,function(item,callback){
 
-
-
-            },function(err,result){
-
+            var str="delete from time_price where no=1"+item.no+" and time>'2017-05-23'";
+            conn.query(str,function(err,r){
+                temp++;
+                console.log(temp+"/"+ b.length);
+                if(callback)callback(err,r)
             })
-        }
-    });
 
+        },function(err,result){
+
+
+        });
+    })
 })
 
 
 }
 
 module.exports=new suporter();
-//module.exports.test();
+module.exports.test();
