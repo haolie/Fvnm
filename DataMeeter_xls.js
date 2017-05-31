@@ -497,7 +497,7 @@ DataMeeter.prototype.start=function() {
         //if(!module.exports.isWorking) return;
         //module.exports.commitDateItems();
 
-    }, 30000)
+    }, 10000)
 
 
 

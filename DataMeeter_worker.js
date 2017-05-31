@@ -132,8 +132,8 @@ worker.prototype.getValuesFromfile = function (item, allcallback) {
 
 worker.prototype.start = function () {
 
-    //2017-05-23_
-    //var temp=JSON.parse('{"no":"000829","date":"2017-05-23","min":0,"max":0,"ud":0,"lastprice":0,"face":0,"dde_b":0,"dde_s":0,"mainforce":0,"state":0,"per":0,"index":2,"savestate":1,"file":"./datafiles/2017-05-23_000829.xls","trytimes":0}');
+    //2017-05-25_600879
+    //var temp=JSON.parse('{"no":"600879","date":"2017-05-25","min":0,"max":0,"ud":0,"lastprice":0,"face":0,"dde_b":0,"dde_s":0,"mainforce":0,"state":0,"per":0,"index":2,"savestate":1,"file":"./datafiles/2017-05-25_600879.xls","trytimes":0}');
     //module.exports.saveToDb(temp, function (err, result) {
     //    module.exports.sendMsg({
     //        index: item.index,

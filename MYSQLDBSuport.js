@@ -71,7 +71,7 @@ suporter.prototype.saveTimePrice=function(timevalues,allcallback){
         if(err==null){
 
             async.mapLimit(lists,1,function(items,callback){
-               var insert='INSERT INTO time_price(no,time,price,trade_type,turnover_inc,volume) VALUES' ;
+               var insert='replace INTO time_price(no,time,price,trade_type,turnover_inc,volume) VALUES' ;
                    for (var i in items){
                        insert+=module.exports.getInsertStr(items[i]);
                        if(i==items.length-1) insert+=';';
@@ -310,7 +310,7 @@ suporter.prototype.updatacodeface=function(item,callback){
 
 
 suporter.prototype.test=function(){
-
+return;
 module.exports.getfaces({date:'2017-05-26'},function(a,b){
 
 
