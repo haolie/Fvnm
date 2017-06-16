@@ -3,13 +3,14 @@
  */
 var http = require('http');
 var async=require("async");
-var percount=50;
+var percount=70;
 var token="";
 var fs= require('fs');
 var path = require('path');
 var dbsuport = require('./MYSQLDBSuport.js');
 var request=require('request');
 var querylimit=1;
+require('date-utils');
 
 var nohelper=function Nohelper(){}
 
@@ -24,8 +25,8 @@ nohelper.prototype.getallnofromweb=function(date,callback){
     this.allItems={};
     this.getToken(date,function(err,tokenObj){
         token=tokenObj.token;
-        pageCount=Math.floor(tokenObj.code_count/70);
-        if(Math.floor(tokenObj.code_count%70)>0)
+        pageCount=Math.floor(tokenObj.code_count/percount);
+        if(Math.floor(tokenObj.code_count%percount)>0)
           pageCount+=1;
 
         var indexarray=[];
@@ -91,7 +92,7 @@ nohelper.prototype.getno=function(index,callback){
 
             }
             if(callback)
-            setTimeout(callback(null,result),500)
+            setTimeout(function(){callback(null,result)} ,200)
 
         })
     })
@@ -114,13 +115,9 @@ nohelper.prototype.getToken=function(date,callback){
            var buf=Buffer.concat(chunks, length);
            var str= buf.toString();
 
-
-
            str=str.substring(str.indexOf("var allResult ="));
            str=str.substring(str.indexOf("{"),str.indexOf(";\n"));
            var temp=JSON.parse(str);
-
-
 
            if(callback)callback(null,temp);
        })
@@ -139,9 +136,9 @@ nohelper.prototype.savenofile=function(items,callback){
 nohelper.prototype.getwebDates=function(start,callback){
    // start="2017-01-25";
     var uri="http://quotes.money.163.com/service/chddata.html?code=0000001&start=" +
-        new Date(start).toLocaleDateString().replace(/-/g,"")+
+        new Date(start).toFormat("YYYY-MM-DD").replace(/-/g,"")+
         "&end=" +
-        new Date(global.datestr).toLocaleDateString().replace(/-/g,"")+
+        new Date(global.datestr).toFormat("YYYY-MM-DD").replace(/-/g,"")+
         "&fields=TCLOSE;HIGH;LOW;TOPEN;LCLOSE;CHG;PCHG;VOTURNOVER;VATURNOVER";
 
     var file="./datafiles/sh000001.xls";
@@ -174,28 +171,35 @@ nohelper.prototype.getallnofromlocal=function(datestr, callback){
 }
 
 nohelper.prototype.getallno=function(date,getallnocallback){
-
     dbsuport.getfaces({date:date},function(err,items){
         var temps=[];
         if(err==null&&items&&items.length>0){
-            for(var i=0;i<items.length;i++){
-                if(temps.no==global.shcode) continue;
-                items[i].index=i;
-                items[i].savestate=-1;
-                temps.push(items[i]);
-            }
+
+            //var temps=[];
+            //var obj={};
+            //items.forEach(function(d,i){
+            //    obj[d.no]=d;
+            //})
+            //
+            //module.exports.getallnofromweb(date,function(err,webitems){
+            //
+            //    webitems.forEach(function(d,i){
+            //        if(obj[d.no])
+            //            temps.push(obj[d.no]);
+            //        else
+            //            temps.push(d)
+            //    })
+            //    getallnocallback(err,temps);
+            //});
 
             getallnocallback(err,items);
+
         }
         else
         module.exports.getallnofromweb(date,function(err,items){
             if(err)getallnocallback("获取出错",null);
             else{
                 dbsuport.savecodefaces(items,function(err,result){
-                    for(var i=0;i<items.length;i++){
-                        items[i].index=i;
-                        items[i].savestate=-1;
-                    }
                     getallnocallback(null,items);
                 })
             }

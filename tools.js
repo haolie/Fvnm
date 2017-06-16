@@ -34,6 +34,8 @@ tool.prototype.convertToTIMESTAMP=function(time){
         (date.getMonth()+1)+"-"+date.getDate()+" "+date.getHours()+":"+date.getMinutes()+":"+date.getSeconds();
 }
 
+
+
 Date.prototype.add = function (part, value) {
     value *= 1;
     if (isNaN(value)) {

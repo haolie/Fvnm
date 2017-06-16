@@ -7,15 +7,13 @@ var async=require("async");
 var hashmap=require("hashmap");
 var nohelper = require('./nohelper.js');
 var dbsuport = require('./MYSQLDBSuport.js');
-var analyser = require('./dataAnalyser.js');
-var tool = require('./tools.js');
 var  process = require('process');
 var url=require("url");
 var zlib = require('zlib');
 var fs= require('fs');
 var fork = require('child_process').fork;
 var request=require('request');
-var childProgresscount=3;
+var childProgresscount=5;
 
 //
 var tempCodes=['300207','600313','600510'];
@@ -39,10 +37,10 @@ DataMeeter.prototype.checkValueDate=function(callback){
             global.datestr=str;
             var curdate=new Date();
             var curstr=curdate.getFullYear()+"-"+(curdate.getMonth()+1)+"-"+curdate.getDate();
-            if(curstr==global.datestr&&curdate.getHours()<15){
-                callback(null,true);
-                return;
-            }
+            //if(curstr==global.datestr&&curdate.getHours()<15){
+            //    callback(null,true);
+            //    return;
+            //}
 
             //var datastr=date.getFullYear()+"-"+(date.getMonth()+1)+"-"+date.getDate();
             dbsuport.getcodeface(global.shcode,str,function(err,result){
@@ -102,7 +100,7 @@ DataMeeter.prototype.dataContext={
 				
                 if(cur.index>=cur.items.length){
                     cur.finished=!module.exports.isWorking;
-                    if(cur.finished) module.exports.commitDateItems();
+                  //  if(cur.finished) module.exports.commitDateItems();
                     return null;
                 }
                 continue;
@@ -121,99 +119,113 @@ DataMeeter.prototype.dataContext={
 DataMeeter.prototype.dateItems=[];
 
 DataMeeter.prototype.downDateFiles=function(date,callback){
-    module.exports.console(date);
-
+    module.exports.console("start file down:"+ date);
     nohelper.getallno(date,function(err,codes){
         if(err){
             callback(err,null);
             return;
         }
+        var temps=[];
+        codes.forEach(function(c,i){
+            if(c.no==global.shcode) return;
+            c.index=i;
+            c.downstate=c.savestate=-1;
+            if(c.state)
+                c.downstate=c.savestate=2;
+            else
+                temps.push(c);
+        });
 
-        var dateitem={date:date,items:codes};
+        module.exports.console(date +": count="+ codes.length+"; needsave="+temps.length );
+        if(temps.length==0){
+            dbsuport.updatacodeface({
+                no:global.shcode,
+                state:1,
+                date:date
+            },function(err,r){
+                callback(null,true);
+                module.exports.console(date+ " has save completed");
+            });
+
+            return;
+        }
+
+        var dateitem={date:date,items:temps};
         module.exports.dateItems.push(dateitem);
         async.mapLimit(dateitem.items,2,function(item,mapcb){
-            dbsuport.getcodeface(item.no,date,function(err,face){
-                if(face&&face.state){
-                   // module.exports.console(item.no+ ": has saved,no need down");
-					item.savestate=2;
+            var file="./datafiles/"+date+"_"+item.no +".xls";
+            fs.exists(file,function(exist){
+                if(exist){
+                    module.exports.console("exist："+item.no + "  "+ item.index+"/"+dateitem.items.length);
+                    item.savestate=0;
+                    item.file=file;
+                    item.trytimes=0;
+                    module.exports.dataContext.items.push(item);
                     mapcb(null,0);
-                    return;
                 }
+                else {
+                    var datetime=new Date(date);
+                    //  http://stock.gtimg.cn/data/index.php?appn=detail&action=download&c=sz000819&d=20170522
+                    //url="http://quotes.money.163.com/cjmx/" +
+                    //    datetime.getFullYear() + "/" +
+                    //    datetime.toLocaleDateString().replace(/-/g,'') +"/";
 
-                var file="./datafiles/"+date+"_"+item.no +".xls";
-                fs.exists(file,function(exist){
-                    if(exist){
-                        module.exports.console("exist："+item.no + "  "+ item.index+"/"+dateitem.items.length);
+                    url="http://stock.gtimg.cn/data/index.php?appn=detail&action=download";
+                    var codestr="sz"+ item.no;
+                    if(Number(item.no)>=600000)codestr="sh"+ item.no;
+                    var datestr=date.replace('-','');
+                    datestr=datestr.replace('-','');
+                    url=url+"&c="+codestr+"&d="+datestr;
+                    var stream = fs.createWriteStream(file);
+                    request.get(url,{timeout:15000},function(err){
+                        if(err){
+                            module.exports.console("下载成功失败失败");
+                            module.exports.console("下载成功失败失败");
+                            module.exports.console("下载成功失败失败");
+                            module.exports.console("下载成功失败失败");
+                            module.exports.console("下载成功失败失败");
+                            module.exports.console("下载成功失败失败");
+                            module.exports.console("下载成功失败失败");
+                            module.exports.console("下载成功失败失败");
+                            module.exports.console("下载成功失败失败");
+                            module.exports.console("下载成功失败失败");
+                            item.savestate=-1;
+                            mapcb(null,0);
+
+                            fs.exists(file,function(exist){
+                                if(exist) fs.unlink(file);
+                            });
+                        }
+
+                    }).on("error",function(){
+                        module.exports.console("下载成功失败失败");
+                        module.exports.console("下载成功失败失败");
+                        module.exports.console("下载成功失败失败");
+                        module.exports.console("下载成功失败失败");
+                        module.exports.console("下载成功失败失败");
+                        module.exports.console("下载成功失败失败");
+                    }).pipe(stream).on('close', function(err,result){
+                        //request(url).pipe(stream).on('close', function(err,result){
+                        stream.end();
+                        if(err){
+                            item.savestate=-1;
+                            mapcb(null,result);
+
+                            fs.exists(file,function(exist){
+                                if(exist) fs.unlink(file);
+                            });
+                            return;
+                        }
+                        module.exports.console("下载成功："+file+"  "+ item.index+"/"+dateitem.items.length);
                         item.savestate=0;
                         item.file=file;
                         item.trytimes=0;
                         module.exports.dataContext.items.push(item);
-                        mapcb(null,0);
-                    }
-                    else {
-                        var datetime=new Date(date);
-                      //  http://stock.gtimg.cn/data/index.php?appn=detail&action=download&c=sz000819&d=20170522
-                        //url="http://quotes.money.163.com/cjmx/" +
-                        //    datetime.getFullYear() + "/" +
-                        //    datetime.toLocaleDateString().replace(/-/g,'') +"/";
+                        mapcb(null,result);
+                    }).on("error",function (){
 
-                            url="http://stock.gtimg.cn/data/index.php?appn=detail&action=download";
-                        var codestr="sz"+ item.no;
-                        if(Number(item.no)>=600000)codestr="sh"+ item.no;
-                        var datestr=date.replace('-','');
-                        datestr=datestr.replace('-','');
-                        url=url+"&c="+codestr+"&d="+datestr;
-                        var stream = fs.createWriteStream(file);
-                        request.get(url,{timeout:15000},function(err){
-                            if(err){
-                                module.exports.console("下载成功失败失败");
-                                module.exports.console("下载成功失败失败");
-                                module.exports.console("下载成功失败失败");
-                                module.exports.console("下载成功失败失败");
-                                module.exports.console("下载成功失败失败");
-                                module.exports.console("下载成功失败失败");
-                                module.exports.console("下载成功失败失败");
-                                module.exports.console("下载成功失败失败");
-                                module.exports.console("下载成功失败失败");
-                                module.exports.console("下载成功失败失败");
-                                item.savestate=-1;
-                                mapcb(null,0);
-
-                                fs.exists(file,function(exist){
-                                    if(exist) fs.unlink(file);
-                                });
-                            }
-
-                        }).on("error",function(){
-                            module.exports.console("下载成功失败失败");
-                            module.exports.console("下载成功失败失败");
-                            module.exports.console("下载成功失败失败");
-                            module.exports.console("下载成功失败失败");
-                            module.exports.console("下载成功失败失败");
-                            module.exports.console("下载成功失败失败");
-                        }).pipe(stream).on('close', function(err,result){
-                        //request(url).pipe(stream).on('close', function(err,result){
-                            stream.end();
-                            if(err){
-                                item.savestate=-1;
-                                mapcb(null,result);
-
-                                fs.exists(file,function(exist){
-                                   if(exist) fs.unlink(file);
-                                });
-                                return;
-                            }
-                            module.exports.console("下载成功："+file+"  "+ item.index+"/"+dateitem.items.length);
-                            item.savestate=0;
-                            item.file=file;
-                            item.trytimes=0;
-                            module.exports.dataContext.items.push(item);
-                            mapcb(null,result);
-                        }).on("error",function (){
-
-                        });
-                    }
-                })
+                    });
+                }
             })
 
         },function(err,result){
@@ -247,6 +259,7 @@ DataMeeter.prototype.getQueryDates=function(callback){
     var tempdate=new Date(global.datestr);
      tempdate.add('d',-30);
     tempdate=tempdate.toLocaleDateString();
+    tempdate="2017-01-01";
     nohelper.getwebDates(tempdate,function(err,dates){
         var date=[];
         if(dates==null&&dates.length==0){
@@ -267,52 +280,6 @@ DataMeeter.prototype.getQueryDates=function(callback){
 
     });
 }
-
-DataMeeter.prototype.commitDateItems=function(){
-    if(!module.exports.isWorking|| module.exports.dateItems==null||module.exports.dateItems.length==0){
-        return;
-    }
-
-    async.mapLimit(module.exports.dateItems,1,function(date,cb){
-        if(!date.items||!date.items.length) cb(null,false);
-        date.downcount=0;
-        date.savecount=0;
-        for(var i in date.items){
-            if(date.items[i].downstate>-1){
-                date.downcount++;
-            }
-            else  if(date.items[i].savestate==2){
-                date.savecount++;
-            }
-        }
-
-        if(date.savecount<date.items.length){
-            cb(null,false);
-            return;
-        }
-
-        dbsuport.updatacodeface({
-            no:global.shcode,
-            state:1,
-            date:date.date
-        },function(err,r){
-            cb(null,true);
-            module.exports.console(date.date+ " has save completed");
-        });
-
-    },function(err,results){
-
-        if(module.exports.isdowning) return;
-
-        var finished=true;
-        for(var i in results){
-            finished&=results[i];
-        }
-        if(finished) module.exports.isWorking=false;
-
-    });
-}
-
 
 DataMeeter.prototype.consoleTimes=function(str){
     var ms=new Date().valueOf()-starttime.valueOf();
@@ -355,7 +322,7 @@ DataMeeter.prototype.startwork=function(){
             }
             else {
                 module.exports.console("downFinished");
-                module.exports.commitDateItems();
+               // module.exports.commitDateItems();
                 module.exports.isWorking=false;
             }
         }
@@ -469,12 +436,6 @@ DataMeeter.prototype.isdowning=false;
 DataMeeter.prototype.isWorking=null;
 DataMeeter.prototype.progress=[];
 DataMeeter.prototype.start=function() {
-
-    //module.exports.saveToDb({no:'000166',date:"2017-01-26"},function(err,items){
-    //
-    //})
-    //return;
-
         module.exports.isWorking = true;
 
         //setInterval(function () {
@@ -492,16 +453,6 @@ DataMeeter.prototype.start=function() {
                 if(p.state=="free") module.exports.sendWorker(p);
             })
         }, 1000)
-
-    setInterval(function () {
-        //if(!module.exports.isWorking) return;
-        //module.exports.commitDateItems();
-
-    }, 10000)
-
-
-
-
 }
 
 module.exports=new DataMeeter();

@@ -7,7 +7,7 @@ var dbsuport = require('./MYSQLDBSuport.js');
 var tool = require('./tools.js');
 var lcsv = require('./localCSV.js');
 //var xls_tool = require('./xlstool.js');
-var xls_tool = require('xls-to-json');
+//var xls_tool = require('xls-to-json');
 var process = require('process');
 var fs = require('fs');
 
@@ -30,51 +30,42 @@ worker.prototype.sendMsg = function (msg, type) {
 }
 
 worker.prototype.saveToDb = function (item, allcallback) {
-   // module.exports.console(JSON.stringify(item));
-    dbsuport.getcodeface(item.no, item.date, function (err, face) {
-        if (face && face.state) {
-            module.exports.console(item.no + ": 已保存");
-            allcallback(0, true);
+    module.exports.getValuesFromfile(item, function (err, items) {
+        if (err) {
+            module.exports.console(item.no + ": 获取文件数据失败");
+            allcallback(1, 0);
             return;
         }
 
-        module.exports.getValuesFromfile(item, function (err, items) {
+        dbsuport.saveTimePrice(items, function (err, result) {
             if (err) {
-                module.exports.console(item.no + ": 获取文件数据失败");
-                allcallback(1, 0);
-                return;
+                module.exports.console( item.no+" 数据保存失败保存失败");
+                allcallback(1, 1);
             }
+            else {
+                module.exports.console( item.no+" 保存成功");
+                if (items.length) {
+                    var face = {
+                        _id: item.no + "_" + item.date,
+                        no: item.no,
+                        date: item.date,
+                        lastprice: item.lastprice,
+                        _min: Math.floor(item.min * 100),
+                        _max: Math.floor(item.max * 100),
+                        state: 1
+                    };
 
-            dbsuport.saveTimePrice(items, function (err, result) {
-                if (err) {
-                     module.exports.console( item.no+" 数据保存失败保存失败");
-                    allcallback(1, 1);
+                    dbsuport.updatacodeface(face, function (err, s) {
+                        allcallback(0, true);
+                    });
                 }
                 else {
-                    module.exports.console( item.no+" 保存成功");
-                    if (items.length) {
-                        var face = {
-                            _id: item.no + "_" + item.date,
-                            no: item.no,
-                            date: item.date,
-                            lastprice: item.lastprice,
-                            _min: Math.floor(item.min * 100),
-                            _max: Math.floor(item.max * 100),
-                            state: 1
-                        };
-
-                        dbsuport.updatacodeface(face, function (err, s) {
-                            allcallback(0, true);
-                        });
-                    }
-                    else {
-                        allcallback(0, true);
-                    }
+                    allcallback(0, true);
                 }
+            }
 
 
-            });
-        })
+        });
     })
 }
 
