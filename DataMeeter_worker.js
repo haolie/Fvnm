@@ -10,6 +10,7 @@ var lcsv = require('./localCSV.js');
 //var xls_tool = require('xls-to-json');
 var process = require('process');
 var fs = require('fs');
+var util = require('util');
 
 var worker = function () {
 }
@@ -50,10 +51,13 @@ worker.prototype.saveToDb = function (item, allcallback) {
                         no: item.no,
                         date: item.date,
                         lastprice: item.lastprice,
-                        _min: Math.floor(item.min * 100),
-                        _max: Math.floor(item.max * 100),
+                        startprice: items[0].price,
+                        _min: Math.floor(item.min * 100)/100,
+                        _max: Math.floor(item.max * 100)/100,
                         state: 1
                     };
+
+                    module.exports.console( face.startprice+"pricepricepricepricepricepricepriceprice");
 
                     dbsuport.updatacodeface(face, function (err, s) {
                         allcallback(0, true);
