@@ -1,6 +1,10 @@
 /**
  * Created by youhao on 2017/1/1.
  */
+var util = require('util');
+var http = require('http');
+var fs = require('fs');
+
 var tool=function(){}
 
 tool.prototype.getSpiedList=function(array,percount,listcount,enfun){
@@ -63,6 +67,89 @@ Date.prototype.add = function (part, value) {
         default:
 
     }
+
+    return this;
 }
+
+tool.prototype.console = function (item) {
+    if(!item) return;
+    if(typeof item=="object") item=JSON.stringify(item);
+
+    if (process.send)
+        module.exports.sendMsg(item, "console");
+    else
+        console.log(item);
+}
+
+tool.prototype.HttpRequest=function(option,callback){
+    var str="get";
+    if(option.method=="POST") str="request";
+
+    var request= http[str](option,function (res){
+        var length=0;
+        var chunks=[];
+        res.on('error', function (chunk) {
+            callback(1, null);
+        });
+        var ondata=function (chunk) {
+            length+=chunk.length;
+            chunks.push(chunk);
+        };
+        if(option.ondata) ondata=option.ondata;
+        res.on('data',ondata);
+        res.on('end', function (dd) {
+            if(option.ondata) return callback(0,null);
+
+            var buf=Buffer.concat(chunks, length);
+            var str  =buf.toString()
+            try {
+                var result=JSON.parse(str);
+                callback(0,result);
+            }catch (ex){
+                console.log(ex);
+                callback(1,null);
+            }
+        });
+    })
+
+    request.on("error",function(err){
+        callback(1, null);
+    })
+
+    return request;
+
+}
+
+tool.prototype.HttpDownFile=function(url,localPath,callback){
+    try {
+        var request= http.get(url,function (res){
+            var  out= fs.createWriteStream(localPath);
+            res.on('error', function (chunk) {
+                callback(1, "请求出错！");
+            });
+            res.on('data',function(data){
+                out.write(data);
+            });
+            res.on('end', function (dd) {
+                out.end(function(){
+                    callback(0,"")
+                })
+            });
+        })
+
+        request.on("error",function(err){
+            callback(1, "请求出错");
+        })
+    }catch (ex ){
+        callback(1, ex);
+    }
+}
+
+//tool.prototype.getDateStr=function(obj){
+//    if(util.isString(obj)){
+//        return obj;
+//    }
+//}
+
 
 module.exports=new tool();

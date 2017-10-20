@@ -12,6 +12,7 @@ namespace demo {
     using v8::String;
     using v8::Value;
     using v8::Array;
+    using v8::Uint8Array;
     using v8::Integer;
     using v8::Number;
 
@@ -34,12 +35,12 @@ namespace demo {
 //args.GetReturnValue().Set(input_array);
 
 
- Local<Array> input_array = Local<Array>::Cast(args[0]);
+ Local<Uint8Array> input_array = Local<Uint8Array>::Cast(args[0]);
  int len=input_array->Length();
 int row_index;
 unsigned char temp;
-	Local<Array> dataArray=Array::New(isolate,len);
-
+	//Local<Uint8Array> dataArray=Uint8Array::New(Array::New(isolate,len));
+    Local<Array> dataArray=Array::New(isolate,len);
 	for(row_index=0;row_index<len;row_index++){
 	   temp=input_array->Get(row_index)->NumberValue();
 	//   temp+=1;

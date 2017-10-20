@@ -3,6 +3,7 @@ var http = require('http');
 var async = require("async");
 var url = require("url");
 var tool = require('./tools.js');
+var dateutil = require('date-utils');
 
 var codeface = "codeface";
 var time_price = "time_price";
@@ -163,7 +164,7 @@ suporter.prototype.convertface = function (results) {
         for (var i in results) {
             items.push({
                 no: results[i]._no.toString().substring(1),
-                date: results[i]._date.toLocaleDateString(),
+                date:  new Date(results[i]._date).toFormat("YYYY-MM-DD"),
                 min: results[i]._min / 100,
                 max: results[i]._max / 100,
                 ud: results[i].ud / 100,

@@ -5,9 +5,9 @@ var fs = require('fs');
 var path = require('path');
 var async=require("async");
 //var cloudSurppoter= require('./TXCloudSupporter.js');
-var dbsupport= require('./MYSQLDBSuport.js');
+var dbsupport= require('../../MYSQLDBSuport');
 var cloudSurppoter= require('./QiNiuTranfer.js');
-var tool = require('./tools.js');
+var tool = require('../../tools.js');
 
 var CM=function(){}
 
