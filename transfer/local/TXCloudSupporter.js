@@ -24,7 +24,7 @@ var cosObj;
 
 var Supporter=function(){}
 module.exports=new Supporter();
-Supporter.prototype.CurBucket="";
+Supporter.prototype.CurBucket="sparkmoon";
 
 Supporter.prototype.getDirectories=function(callback){
     var list=[];
@@ -253,8 +253,6 @@ Supporter.prototype.createDir=function(remotePath,name,callback){
         callback(err,result);
 
     })
-
-
 }
 
 Supporter.prototype.deleteDir=function(remotePath,callback){

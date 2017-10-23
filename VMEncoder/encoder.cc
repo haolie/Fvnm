@@ -1,5 +1,12 @@
 // addon.cc
 #include < node.h >
+#include <v8.h>
+#include <node_buffer.h>
+
+using namespace node;
+using namespace v8;
+using namespace std;
+
 
 namespace demo {
 
@@ -16,24 +23,11 @@ namespace demo {
     using v8::Integer;
     using v8::Number;
 
+
     void MyFunction(const FunctionCallbackInfo < Value > &args) {
         Isolate * isolate = args.GetIsolate();
-//
-//        int row_index=args[0]->NumberValue();
-//
-//        Local<Array> input_array = Local<Array>::Cast(args[3]);
-//
-//        printf("%d\n", row_index);
-//        Local<Integer> integer = args[1]->ToInteger();
-//         	Local<Array> dataArray=Array::New(isolate,3);
-//        	for(row_index=0;row_index<3;row_index++) {
-//
-//        Local<Value> cell=Number::New(isolate,args[row_index]->NumberValue()+2);
-//        	dataArray->Set(Integer::New(isolate,row_index),cell);
-//
-//        	  	}
-//args.GetReturnValue().Set(input_array);
-
+ Local<Value> arg1 = args[0];
+   size_t size = Buffer::Length(arg1->ToObject());
 
  Local<Uint8Array> input_array = Local<Uint8Array>::Cast(args[0]);
  int len=input_array->Length();

@@ -92,6 +92,6 @@ function fileTypeCheck(file) {
 }
 
 module.exports=new parker();
-var result= module.exports.getFileInfos("D:\\BaiduNetdiskDownload")
+var result= module.exports.getFileInfos("D:\\TDDOWNLOAD\\2016年9月12日")
 console.log(result);
 
