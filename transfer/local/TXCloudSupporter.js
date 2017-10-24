@@ -278,8 +278,6 @@ Supporter.prototype.createDir=function(remotePath,name,callback){
         callback(err,result);
 
     })
-
-
 }
 
 Supporter.prototype.deleteDir=function(remotePath,callback){
