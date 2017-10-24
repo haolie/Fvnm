@@ -10,6 +10,7 @@ var crypto = require('../../libs/crypto.js');
 var http = require('http');
 var async=require("async");
 var querystring=require('querystring');
+var tool=require('../../tools');
 var request=require("request");
 
 var apiid='10028297',
@@ -24,13 +25,15 @@ var cosObj;
 
 var Supporter=function(){}
 module.exports=new Supporter();
-Supporter.prototype.CurBucket="";
+Supporter.prototype.CurBucket="sparkmoon";
 
-Supporter.prototype.getDirectories=function(callback){
+Supporter.prototype.getDirectories=function(basePath,callback){
     var list=[];
     var fun=function(file,funcb){
         var path=""
-        if(file)path=module.exports.getpath(file)
+
+        if(tool.isObject(file))path=module.exports.getpath(file)
+        else if(tool.isString(file))path=file;
 
         module.exports.GetFileStat(path,function(err,data){
             if(err){
@@ -40,7 +43,7 @@ Supporter.prototype.getDirectories=function(callback){
 
             var fds=[];
 
-            if(file)file.children=data;
+            if(tool.isObject(file))file.children=data;
             data.forEach(function(d,i){
                 d.parent=file;
 //                d.isfile= d.sha
@@ -60,13 +63,15 @@ Supporter.prototype.getDirectories=function(callback){
         });
     }
 
-    fun(null,function(err,dl){
+    fun(basePath,function(err,dl){
         callback(err,dl);
     });
 }
 
 Supporter.prototype.getpath=function(file){
     if(file!=null&&file.parent!=null){
+        if(tool.isString(file.parent)) return file.parent+"/"+ file.name;
+
         return  module.exports.getpath(file.parent)+"/"+ file.name
     }
 
@@ -74,7 +79,27 @@ Supporter.prototype.getpath=function(file){
 
 }
 
-Supporter.prototype.downFile=function(file,path,callback){
+Supporter.prototype.getWebObj=function(file,callback){
+    var rpath=module.exports.createPath(file);
+
+    var out = null;
+    var  options = {
+        //  hostname:module.exports.CurBucket+"-"+apiid+".cossh.myqcloud.com",
+        host:'sparkmoon-10028297.cossh.myqcloud.com',
+        port: 80,
+        path: "/"+file,
+        KeepAlive: true,
+        headers: {
+            'Authorization':module.exports.createAuthorization()
+        }
+    };
+
+    module.exports.HttpRequest(options,function(err,result){
+        callback(err,result);
+    })
+}
+
+Supporter.prototype.downFile=function(file,output,callback){
     var rpath=module.exports.createPath(file);
 
     var out = null;
@@ -87,17 +112,17 @@ Supporter.prototype.downFile=function(file,path,callback){
         headers: {
             'Authorization':module.exports.createAuthorization()
         },
-        ondata:function(data){
+        ondata:tool.isFunction(output)?output : function(data){
             if(out==null)
-             out= fs.createWriteStream(path);
+             out= fs.createWriteStream(output);
             out.write(data);
         }
     };
 
     module.exports.HttpRequest(options,function(){
         if(out!=null)
-           out.end(function(){  if(callback)callback(0,path)  });
-        else if(callback)callback(0,path)
+           out.end(function(){  if(callback)callback(0,output)  });
+        else if(callback)callback(0,output)
     })
 }
 

@@ -81,6 +81,18 @@ tool.prototype.console = function (item) {
         console.log(item);
 }
 
+tool.prototype.getHttpJson=function (url,callback) {
+    http.get(url,function (res,b) {
+        var resData = "";
+        res.on("data",function(data){
+            resData += data;
+        });
+        res.on("end", function() {
+            callback(null,JSON.parse(resData));
+        });
+    })
+}
+
 tool.prototype.HttpRequest=function(option,callback){
     var str="get";
     if(option.method=="POST") str="request";
@@ -143,6 +155,26 @@ tool.prototype.HttpDownFile=function(url,localPath,callback){
     }catch (ex ){
         callback(1, ex);
     }
+}
+
+tool.prototype.isArray=function (array) {
+    return Object.prototype.toString.call(arr) === '[object Array]';
+}
+
+tool.prototype.isString=function (str) {
+    return typeof str==="string";
+}
+
+tool.prototype.isObject=function (obj) {
+    return Object.prototype.toString.call(obj) === '[object Object]';
+}
+
+tool.prototype.isNumber=function (num) {
+   return typeof num==="number";
+}
+
+tool.prototype.isFunction=function (obj) {
+    return Object.prototype.toString.call(obj) ==="[object Function]";
 }
 
 //tool.prototype.getDateStr=function(obj){
