@@ -7,6 +7,7 @@ var txclouder=require("../transfer/local/TXCloudSupporter.js");
 var vmEncoder=require("../VMEncoder/build/Release/VMEncoder");
 var uuidV4 = require('uuid/v4');
 var cloudRoot="PVter/P_V/"
+var tools =require('../tools')
 
 var tempFilePath="./temp";
 var endname=".park";
@@ -136,6 +137,8 @@ transfer.prototype.splitFile=function(file,info,encoder,callback){
 
 };
 
+transfer.prototype.downFile=function(file,output,cloud,callback){
+    createInfoJson(file,function (err,info) {})}
 /*
 * 连接文件
 * inpath：原文件路径
@@ -146,8 +149,6 @@ transfer.prototype.splitFile=function(file,info,encoder,callback){
 transfer.prototype.joinFile=function(inpath,outpath,isencode,callback){
     var files=fs.readdirSync(inpath);
     fs.open(outpath,"w+",function(err,fd){
-transfer.prototype.downFile=function(file,output,cloud,callback){
-    createInfoJson(file,function (err,info) {
         var len=0;
         var readfun=function(i){
             var rs = fs.ReadStream(inpath+"/"+files[i]);
@@ -216,6 +217,10 @@ function createInfoJson(file,callback) {
         o.subfilenames.push(i+endname)
     }
 
+    o.key=file.key;
+    if(o.key)
+        callback(0,o);
+    else
     txclouder.getFileHash1(file.path,function (err,hash1) {
         o.key=hash1.hash1;
         callback(err,o);
@@ -223,17 +228,23 @@ function createInfoJson(file,callback) {
 }
 
 
+        module.exports=new transfer();
+        // module.exports.getCloudFiles(function (err,a) {
+        //
+        // })
 
-module.exports=new transfer();
-module.exports.uploadFile({ videofiles: [],
-    imagefiles: [],
-    dirs: [],
-    isfile: true,
-    type: 0,
-    path: 'D:\\BaiduNetdiskDownload\\VID20161008112853.mp4',
-    size: 41777122 },null,function () {
-
-})
+// txclouder.deleteDir("PVter/P_V/fa887db8-7e30-464c-9ec7-af1ff5c81519",function (a,b) {
+//
+// })
+// module.exports.uploadFile({ videofiles: [],
+//     imagefiles: [],
+//     dirs: [],
+//     isfile: true,
+//     type: 0,
+//     path: 'D:\\BaiduNetdiskDownload\\VID20161008112853.mp4',
+//     size: 41777122 },txclouder,function (err,result) {
+//
+// })
 
 // var ta=new Uint8Array([8,8,8,8,8]);
 // var tb=encoderFun(ta);

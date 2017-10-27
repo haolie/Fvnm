@@ -130,7 +130,7 @@ Supporter.prototype.deleteFile=function(remotePath,callback){
     var rpath=module.exports.createPath(remotePath);
 
     module.exports.basePost(rpath,{"op":"delete"},function(err,result){
-
+        callback(err,result);
     })
 }
 
@@ -281,11 +281,45 @@ Supporter.prototype.createDir=function(remotePath,name,callback){
 }
 
 Supporter.prototype.deleteDir=function(remotePath,callback){
-    var path=module.exports.createPath(remotePath)+"/";
+    if(remotePath.lastIndexOf("/")<remotePath.length-1){
+        remotePath+="/";
+    }
+    var path=module.exports.createPath(remotePath);
 
-    module.exports.basePost(path,{"op": "delete"},function(err,result){
-        callback(err,result);
+    module.exports.GetFileStat(remotePath,function (err,file) {
+
+        if(file.length==0){
+            module.exports.basePost(remotePath,{"op": "delete"},function(err,result){
+                callback(err,result);
+            })
+        }
+        else {
+
+            async.mapLimit(file,1,function (f,mb) {
+                if(f.sha){
+                    module.exports.deleteFile(remotePath+f.name,function () {
+                        mb(0,0);
+                    })
+                }
+                else {
+                    module.exports.deleteDir(remotePath+f.name,function () {
+                        mb(0,0)
+                    })
+                }
+
+            },function (err,result) {
+                module.exports.basePost(path,{"op": "delete"},function(err,result){
+                    callback(err,result);
+                })
+            })
+
+        }
+
+
+
     })
+
+
 }
 
 

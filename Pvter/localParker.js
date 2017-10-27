@@ -13,7 +13,7 @@ var parker=function () {
 
 parker.prototype.LocalParkerPath="";
 
-parker.prototype.OutParkPaths=[];
+parker.prototype.OutParkPaths=["D:\\BaiduNetdiskDownload"];
 
 parker.prototype.OutParkVideo=[];
 
@@ -57,6 +57,7 @@ parker.prototype.getFileInfos=function (path,level) {
                 if(fileInfo.type==1){
                     fileInfo.videofiles.push(temp);
                     fileInfo.size+=temp.size;
+                    module.exports.OutParkVideo.push(temp);
                 }else if(fileInfo.type==2){
                     fileInfo.imagefiles.push(temp);
                     fileInfo.size+=temp.size;
@@ -92,6 +93,6 @@ function fileTypeCheck(file) {
 }
 
 module.exports=new parker();
-var result= module.exports.getFileInfos("D:\\TDDOWNLOAD\\2016年9月12日")
-console.log(result);
+// var result= module.exports.getFileInfos("D:\\BaiduNetdiskDownload")
+// console.log(result);
 
