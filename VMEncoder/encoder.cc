@@ -26,17 +26,19 @@ namespace demo {
 
     void MyFunction(const FunctionCallbackInfo < Value > &args) {
         Isolate * isolate = args.GetIsolate();
- Local<Value> arg1 = args[0];
-   size_t size = Buffer::Length(arg1->ToObject());
+        Local<Value> arg1 = args[0];
+       size_t size = Buffer::Length(arg1->ToObject());
+       char* bufferdata = Buffer::Data(arg1->ToObject());
 
- Local<Uint8Array> input_array = Local<Uint8Array>::Cast(args[0]);
- int len=input_array->Length();
+ //Local<Uint8Array> input_array = Local<Uint8Array>::Cast(args[0]);
+ //int len=input_array->Length();
 int row_index;
 unsigned char temp;
 	//Local<Uint8Array> dataArray=Uint8Array::New(Array::New(isolate,len));
-    Local<Array> dataArray=Array::New(isolate,len);
-	for(row_index=0;row_index<len;row_index++){
-	   temp=input_array->Get(row_index)->NumberValue();
+    Local<Array> dataArray=Array::New(isolate,size);
+	for(row_index=0;row_index<size;row_index++){
+	  // temp=input_array->Get(row_index)->NumberValue();
+	  temp=bufferdata[row_index];
 	//   temp+=1;
 	   temp= ~temp ;
 	   dataArray->Set(Integer::New(isolate,row_index),Integer::New(isolate,temp));

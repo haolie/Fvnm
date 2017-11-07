@@ -4,16 +4,16 @@ var http = require('http');
 var async=require("async");
 var util = require('util');
 
-var vidoefiletypes=["temp","mp4"];
+var vidoefiletypes=["temp","mp4","tmp"];
 var imagefiletypes=["png","jpg","jpeg","gif"];
 
 var parker=function () {
 
 }
 
-parker.prototype.LocalParkerPath="";
+parker.prototype.LocalParkerPath="K:\\parker\\P_V";
 
-parker.prototype.OutParkPaths=["D:\\BaiduNetdiskDownload"];
+parker.prototype.OutParkPaths=["D:\\TDDOWNLOAD"];
 
 parker.prototype.OutParkVideo=[];
 
@@ -52,6 +52,7 @@ parker.prototype.getFileInfos=function (path,level) {
         var files= fs.readdirSync(path)
         files.forEach(function (file,index) {
             var temp=module.exports.getFileInfos(path+"\\"+ file,level);
+            temp.name=file;
             if(temp.isfile){
                 fileInfo.type=fileTypeCheck(file);
                 if(fileInfo.type==1){
@@ -93,6 +94,6 @@ function fileTypeCheck(file) {
 }
 
 module.exports=new parker();
-// var result= module.exports.getFileInfos("D:\\BaiduNetdiskDownload")
-// console.log(result);
+ //var result= module.exports.getFileInfos("D:\\TDDOWNLOAD\\2016年3月16日")
+ //console.log(result);
 

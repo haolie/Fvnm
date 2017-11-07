@@ -3,7 +3,7 @@ var fs = require('fs');
 var fn = VMEncoder();
 
 function tester(cfn,callback) {
-    var txt = fs.ReadStream("E:\\softwire\\mysql-5.7.17-winx64.zip");
+    var txt = fs.ReadStream("E:\\software\\drivethelife6_setup.exe");
     console.time()
     txt.on('data', function(d) {
         cfn(d);

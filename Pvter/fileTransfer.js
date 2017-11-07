@@ -6,8 +6,9 @@ var util = require('util');
 var txclouder=require("../transfer/local/TXCloudSupporter.js");
 var vmEncoder=require("../VMEncoder/build/Release/VMEncoder");
 var uuidV4 = require('uuid/v4');
-var cloudRoot="PVter/P_V/"
-var tools =require('../tools')
+var cloudRoot="PVter/P_V/";
+var local=require('./localParker')
+var tools =require('../tools');
 
 var tempFilePath="./temp";
 var endname=".park";
@@ -28,29 +29,33 @@ transfer.prototype.uploadFile=function(file,cloud,callback){
             uploading=1;
             var f=paths.shift();
             cloud.UploadFile(cloudRoot+info.webname, f.name, f.path,function(err,result){
-                callback(0,cloudRoot+info.webname+"/"+f.name);
-                fs.unlink(f.path);
-                if(paths.length){
-                    uploading=0;
-                    upload();
-                }else if(!spliting){
-                    fs.rmdir(path.join(__dirname,tempFilePath+"/"+info.webname));
-                    callback(1,null);
-                }
+                callback(0,cloudRoot+info.webname+"/"+f.name, f.size? f.size:0);
+                uploading=0;
+                fs.unlink(f.path,function(){
+                    if(paths.length){
+                        upload();
+                    }else if(!spliting){
+                        fs.rmdir(path.join(__dirname,tempFilePath+"/"+info.webname));
+                        callback(1,null);
+                    }
+                });
+
             })
         }
 
         cloud.createDir(cloudRoot,info.webname,function(err,msg){
             fs.mkdirSync(path.join(__dirname,tempFilePath+"/"+info.webname))
             var infostr=JSON.stringify(info);
-            var infopath=path.join(__dirname,tempFilePath+"/"+info.webname+"/"+"info.json")
-            fs.writeFile(infopath, infostr,{flag:"w+"},function(err,r){
+            var infopath=path.join(__dirname,tempFilePath+"/"+info.webname+"/"+"info.json");
+            var strbuffer=new Buffer(infostr);
+            strbuffer=new Buffer(encoderFun(strbuffer)) ;
+            fs.writeFile(infopath, strbuffer,{flag:"w+"},function(err,r){
                 paths.push({name:"info.json",path:infopath});
             });
 
-            module.exports.splitFile(file,info,1,function(index,path){
+            module.exports.splitFile(file,info,1,function(index,path,size){
                 if(index>=0){
-                    paths.push({name:info.subfilenames[index],path:path});
+                    paths.push({name:info.subfilenames[index],path:path,size:size});
                     upload();
                 }
                 else{
@@ -63,12 +68,42 @@ transfer.prototype.uploadFile=function(file,cloud,callback){
 
 };
 
-transfer.prototype.downFile=function(file,loacl,cloud){
-    createInfoJson(file,function (err,info) {
-        var len=0;
+transfer.prototype.downFile=function(cfile,loacl,callback){
+    var dir=loacl+"/"+cfile.webname,len= 0,writing=0;downing=1,bufs=[];
+    fs.mkdirSync(dir);
 
+    var buffer= new Buffer(JSON.stringify(cfile));
+    fs.writeFileSync(dir+"/info.json",JSON.stringify(cfile) ,{flag:"w+"});
+    fs.open(dir+"/"+cfile.webname+endname,"w+",function (err,fd) {
+        var wfun=function(){
+            if(bufs.length==0&&!downing){
+                fs.close(fd);
+                callback(1,len);
+            }
 
-    })
+            if(writing||bufs.length==0)return;
+            writing=1;
+
+            var cur= bufs.shift();
+            cur=new Buffer(encoderFun( cur));
+            fs.writeSync(fd,cur,0,cur.length,len);
+            len+=cur.length;
+            callback(0,len);
+            writing=0;
+            wfun();
+
+        }
+
+        async.mapLimit(cfile.subfilenames,1,function(f,mc){
+            txclouder.downFile(cloudRoot+"/"+cfile.webname+"/"+f,function(data){
+                bufs.push(data);
+                wfun();
+            },mc)
+        },function(err,result){
+            downing=0;
+            wfun();
+        })
+    });
 
 };
 
@@ -77,7 +112,15 @@ transfer.prototype.splitFile=function(file,info,encoder,callback){
     var writeindex=0,readindex=0,rlen=0,writeState=0,readEnd=0,offsi=0,buffer=[],wl= 0,outputpaths=[];
     var writeFun=function () {
         if(writeState)return;
+        if(info.partNum==writeindex){
+            if(callback)
+                callback(-1,outputpaths,0);
+            return;
+        }else    if(writeindex>=readindex) {
+            return
+        }
         writeState=1;
+
         var filepath=path.join(__dirname,tempFilePath+"/"+info.webname+"/"+ info.subfilenames[writeindex]);
         fs.open(filepath,"w+",function (err,fd) {
             var wlen=partSize;
@@ -101,17 +144,9 @@ transfer.prototype.splitFile=function(file,info,encoder,callback){
             fs.close(fd);
             writeindex+=1;
             outputpaths.push(filepath);
-            callback(writeindex-1,filepath)
-            if(info.partNum==writeindex){
-                if(callback)
-                    callback(-1,outputpaths)
-                return;
-            }
-
+            callback(writeindex-1,filepath,partSize-offsi);
             writeState=0;
-            if(writeindex<readindex) {
-                writeFun();
-            }
+            writeFun();
         })
     }
 
@@ -120,7 +155,7 @@ transfer.prototype.splitFile=function(file,info,encoder,callback){
         buffer.push(encoderFun(d));
         rlen+=d.length;
         if(rlen/partSize-1>readindex){
-            console.log("rlen:"+rlen);
+          //  console.log("rlen:"+rlen);
             readindex+=1;
             writeFun();
         }
@@ -137,8 +172,7 @@ transfer.prototype.splitFile=function(file,info,encoder,callback){
 
 };
 
-transfer.prototype.downFile=function(file,output,cloud,callback){
-    createInfoJson(file,function (err,info) {})}
+
 /*
 * 连接文件
 * inpath：原文件路径
@@ -177,7 +211,7 @@ transfer.prototype.getCloudFiles=function (callback) {
         txclouder.getDirectories(path,function (err,list) {
             var infos=  getInfoFile(list);
             async.mapLimit(infos,1,function (info,mapcb) {
-                tools.getHttpJson(info.access_url,mapcb)
+                tools.getHttpJson(info.access_url,mapcb,encoderFun)
             },backA)
         })
     },callback)
@@ -196,7 +230,7 @@ function getInfoFile(list) {
 
 function createInfoJson(file,callback) {
     var o={
-        name:"",
+        name:file.name,
         webname:uuidV4(),
         size:file.size,
         key:"",
@@ -233,18 +267,28 @@ function createInfoJson(file,callback) {
         //
         // })
 
-// txclouder.deleteDir("PVter/P_V/fa887db8-7e30-464c-9ec7-af1ff5c81519",function (a,b) {
+// txclouder.deleteDir("PVter/test",function (a,b) {
 //
-// })
-// module.exports.uploadFile({ videofiles: [],
-//     imagefiles: [],
-//     dirs: [],
-//     isfile: true,
-//     type: 0,
-//     path: 'D:\\BaiduNetdiskDownload\\VID20161008112853.mp4',
-//     size: 41777122 },txclouder,function (err,result) {
-//
-// })
+//})
+var updataS=0;
+ //module.exports.uploadFile( { videofiles: [],
+ //    imagefiles: [],
+ //    dirs: [],
+ //    isfile: true,
+ //    type: 0,
+ //    path: 'D:\\TDDOWNLOAD\\2016年3月16日\\3146.tmp',
+ //    size: 1522878,
+ //    name: '3146.tmp' },txclouder,function (isend,result,size) {
+ //
+ //    if(isend){
+ //        console.log("update: completed ")
+ //    }
+ //    else {
+ //        updataS+=size;
+ //        console.log("update:"+(updataS/18268945)*100+"%")
+ //    }
+ //
+ //})
 
 // var ta=new Uint8Array([8,8,8,8,8]);
 // var tb=encoderFun(ta);

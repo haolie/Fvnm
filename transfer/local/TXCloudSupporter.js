@@ -120,8 +120,10 @@ Supporter.prototype.downFile=function(file,output,callback){
     };
 
     module.exports.HttpRequest(options,function(){
-        if(out!=null)
-           out.end(function(){  if(callback)callback(0,output)  });
+        if(out!=null){
+            out.end(function(){  if(callback)callback(0,output)  });
+        }
+
         else if(callback)callback(0,output)
     })
 }

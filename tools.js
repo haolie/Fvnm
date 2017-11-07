@@ -81,10 +81,14 @@ tool.prototype.console = function (item) {
         console.log(item);
 }
 
-tool.prototype.getHttpJson=function (url,callback) {
+tool.prototype.getHttpJson=function (url,callback,encodeFun) {
     http.get(url,function (res,b) {
         var resData = "";
         res.on("data",function(data){
+            if(encodeFun) {
+                data=encodeFun(data);
+                data=new Buffer(data);
+            }
             resData += data;
         });
         res.on("end", function() {
@@ -132,17 +136,27 @@ tool.prototype.HttpRequest=function(option,callback){
 
 }
 
-tool.prototype.HttpDownFile=function(url,localPath,callback){
+tool.prototype.HttpDownFile=function(url,output,callback){
     try {
         var request= http.get(url,function (res){
-            var  out= fs.createWriteStream(localPath);
+            var  out=null;
+            if(module.exports.isFunction(output))
+                out=output
+            else{
+                out= fs.createWriteStream(output)
+            }
+
             res.on('error', function (chunk) {
                 callback(1, "请求出错！");
             });
-            res.on('data',function(data){
+            res.on('data',module.exports.isFunction(output)? output:function(data){
                 out.write(data);
             });
             res.on('end', function (dd) {
+                if(module.exports.isFunction(output)){
+                    callback(0,"")
+                }
+                else
                 out.end(function(){
                     callback(0,"")
                 })
