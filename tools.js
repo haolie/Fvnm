@@ -92,7 +92,13 @@ tool.prototype.getHttpJson=function (url,callback,encodeFun) {
             resData += data;
         });
         res.on("end", function() {
-            callback(null,JSON.parse(resData));
+            try {
+                callback(null,JSON.parse(resData));
+            }
+            catch (ex){
+                callback(1,null);
+            }
+
         });
     })
 }

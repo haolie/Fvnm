@@ -210,6 +210,7 @@ Supporter.prototype.HttpRequest=function(option,callback){
             var buf=Buffer.concat(chunks, length);
             var str  =buf.toString()
             try {
+               // console.log(str)
                 var result=JSON.parse(str);
                 callback(0,result);
             }catch (ex){
@@ -250,12 +251,17 @@ Supporter.prototype.createAuthorization=function(expired,fileId){
 
 Supporter.prototype.GetFileStat=function(remotePath,callback){
     var list=[];
-    var fun=function(context){
+    var fun=function(context,n){
         var path=module.exports.createPath(remotePath);
         path+="?op=list&num="+(pagesize+1);
         if(context) path+="&context="+context;
 
         module.exports.baseRequest(path,"list",function(err,result){
+            if(err){
+                if(n>0)fun(context,n-1);
+                else callback(err,null);
+                return;
+            }
             if(result.code!=0){
                 callback(result.code,[]);
                 return;
@@ -265,11 +271,11 @@ Supporter.prototype.GetFileStat=function(remotePath,callback){
             if(result.listover)
                 callback(0,list);
             else
-                fun(result.context);
+                fun(result.context,5);
         })
     }
 
-    fun(null);
+    fun(null,5);
 }
 
 Supporter.prototype.createDir=function(remotePath,name,callback){
@@ -408,6 +414,7 @@ Supporter.prototype.start=function(){
 
     module.exports.deleteDir("FMoon/2017",function(err,result){
 
+        console.log(result)
     })
 
 

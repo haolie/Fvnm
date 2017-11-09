@@ -261,15 +261,56 @@ function createInfoJson(file,callback) {
     })
 }
 
+transfer.prototype.PVCheck=function (info,callback) {
+    txclouder.GetFileStat(cloudRoot+info.webname+"/",function (err,star) {
+        var names=[];
+        star.forEach(function (item,index) {
+            names.push(item.name);
+        });
+
+        var result=true;
+        for(var i=0;i<info.subfilenames.length;i++){
+            result&= names.indexOf(info.subfilenames[i])>-1;
+        }
+        if(!result)result=info;
+
+        callback(0,result);
+
+    })
+}
+
 
         module.exports=new transfer();
-        // module.exports.getCloudFiles(function (err,a) {
-        //
-        // })
+
+// module.exports.PVCheck({
+//     "name": "6A2B.tmp",
+//     "webname": "00bcdf24-7332-4ad8-be12-4b95d8e44f8f",
+//     "size": 7663992,
+//     "key": "37dd61b6ee33ad63df5c8835c9ad706d9bf58ed4",
+//     "partsize": 2097152,
+//     "partNum": 4,
+//     "subfilenames": [
+//         "0.park",
+//         "1.park",
+//         "2.park",
+//         "3.park"
+//     ],
+//     "level": 1
+// },function (err,rsult) {
+//
+// })
+        module.exports.getCloudFiles(function (err,a) {
+            async.mapLimit(a[0],1,function (item,mb) {
+                module.exports.PVCheck(item,mb)
+            },function (err,r) {
+                console.log(r)
+            })
+
+        })
 
 // txclouder.deleteDir("PVter/test",function (a,b) {
 //
-//})
+// })
 var updataS=0;
  //module.exports.uploadFile( { videofiles: [],
  //    imagefiles: [],
