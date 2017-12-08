@@ -279,6 +279,42 @@ transfer.prototype.PVCheck=function (info,callback) {
     })
 }
 
+function deleteNoInfo(callback) {
+    txclouder.getDirectories(cloudRoot,function (err,list) {
+        var infos=  getInfoFile(list);
+
+        var nameObj={};
+        list.forEach(function (item,ind) {
+            nameObj[item.name]=1;
+        })
+
+        infos.forEach(function (item,index) {
+            if(item.parent.name==undefined||item.parent.name=="undefined"){
+
+            }
+            else if(item.parent.name)
+            nameObj[item.parent.name]=0;
+        })
+
+        infos=[];
+        for(var i in nameObj){
+            if(i=="undefined")
+            {
+
+            }
+            else if(i&&nameObj[i]) infos.push(i);
+        }
+
+        async.mapLimit(infos,1,function (info,mapcb) {
+           txclouder.deleteDir(cloudRoot+info,function (err,r) {
+               if(!err) console.log("delete success:"+cloudRoot+info);
+               else console.log("delete faild:"+cloudRoot+info);
+               mapcb(0,r);
+           });
+        },callback)
+    })
+}
+
 
         module.exports=new transfer();
 
@@ -299,14 +335,14 @@ transfer.prototype.PVCheck=function (info,callback) {
 // },function (err,rsult) {
 //
 // })
-        module.exports.getCloudFiles(function (err,a) {
-            async.mapLimit(a[0],1,function (item,mb) {
-                module.exports.PVCheck(item,mb)
-            },function (err,r) {
-                console.log(r)
-            })
-
-        })
+//         module.exports.getCloudFiles(function (err,a) {
+//             async.mapLimit(a[0],1,function (item,mb) {
+//                 module.exports.PVCheck(item,mb)
+//             },function (err,r) {
+//                 console.log(r)
+//             })
+//
+//         })
 
 // txclouder.deleteDir("PVter/test",function (a,b) {
 //
@@ -335,3 +371,5 @@ var updataS=0;
 // var tb=encoderFun(ta);
 // var tc=encoderFun([8,8,8,8,8]);
 // console.log(1212)
+
+deleteNoInfo()

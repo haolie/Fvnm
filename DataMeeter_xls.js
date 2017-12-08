@@ -13,7 +13,8 @@ var zlib = require('zlib');
 var fs= require('fs');
 var fork = require('child_process').fork;
 var request=require('request');
-var childProgresscount=5;
+var childProgresscount=4;
+var allDates={}
 
 //
 var tempCodes=['300207','600313','600510'];
@@ -52,24 +53,6 @@ DataMeeter.prototype.checkValueDate=function(callback){
 
 
 
-}
-
-DataMeeter.prototype.readDataFile=function(){
-
-    url="http://quotes.money.163.com/cjmx/2017/20170126/1000651.xls";
-    var stream = fs.createWriteStream("./datafiles/1000651.xls");
-    request(url).pipe(stream).on('close', function(err,result){
-
-    });
-return;
-
-    fs.createReadStream('file.json').pipe(request.put('http://mysite.com/obj.json'))
-
-
-    //xls.open('./datafiles/sh600837_20170124.xls',function(err,sheet){
-
-   // })
-   // var list = xls.parse("./datafiles/" + "sh600837_成交明细_20170124.xls");
 }
 
 DataMeeter.prototype.dataContext={
@@ -125,10 +108,14 @@ DataMeeter.prototype.downDateFiles=function(date,callback){
             callback(err,null);
             return;
         }
+        allDates[date].state=-2;
         var temps=[];
+        if(!allDates[date].codes)allDates[date].codes={};
+        allDates[date].count=codes.length;
         codes.forEach(function(c,i){
             if(c.no==global.shcode) return;
-            c.index=i;
+            allDates[date].codes[c.no]=c;
+            c.i=i;
             c.downstate=c.savestate=-1;
             if(c.state)
                 c.downstate=c.savestate=2;
@@ -144,6 +131,8 @@ DataMeeter.prototype.downDateFiles=function(date,callback){
                 date:date
             },function(err,r){
                 callback(null,true);
+                allDates[date].state=1;
+                allDates[date].progress=100;
                 module.exports.console(date+ " has save completed");
             });
 
@@ -156,12 +145,14 @@ DataMeeter.prototype.downDateFiles=function(date,callback){
             var file="./datafiles/"+date+"_"+item.no +".xls";
             fs.exists(file,function(exist){
                 if(exist){
-                    module.exports.console("exist："+item.no + "  "+ item.index+"/"+dateitem.items.length);
+
+                    module.exports.console("exist："+item.no + "  "+ item.i+"/"+dateitem.items.length);
                     item.savestate=0;
                     item.file=file;
                     item.trytimes=0;
+                    allDates[date].progress=(item.i+1)/allDates[date].count*100;
                     module.exports.dataContext.items.push(item);
-                    mapcb(null,0);
+                    mapcb(null,1);
                 }
                 else {
                     var datetime=new Date(date);
@@ -209,19 +200,21 @@ DataMeeter.prototype.downDateFiles=function(date,callback){
                         stream.end();
                         if(err){
                             item.savestate=-1;
-                            mapcb(null,result);
+                            mapcb(null,0);
 
                             fs.exists(file,function(exist){
                                 if(exist) fs.unlink(file);
                             });
                             return;
                         }
-                        module.exports.console("下载成功："+file+"  "+ item.index+"/"+dateitem.items.length);
+                        allDates[date].progress=(item.i+1)/allDates[date].count*100;
+                        module.exports.console("下载成功："+file+"  "+ item.i+"/"+dateitem.items.length);
                         item.savestate=0;
                         item.file=file;
                         item.trytimes=0;
+
                         module.exports.dataContext.items.push(item);
-                        mapcb(null,result);
+                        mapcb(null,1);
                     }).on("error",function (){
 
                     });
@@ -230,6 +223,11 @@ DataMeeter.prototype.downDateFiles=function(date,callback){
 
         },function(err,result){
             module.exports.console(dateitem.date+"  finid");
+            var r=1;
+            result.forEach(function (item) {
+                r&=item;
+            })
+            if(r)allDates[date].state=-1;
             callback(null,result);
         })
     });
@@ -268,16 +266,29 @@ DataMeeter.prototype.getQueryDates=function(callback){
             return;
         }
 
+        dbsuport.getfaces({no:global.shcode},function(err,items){
+            allDates={};
+            items.forEach(function (item) {
+                allDates[item.date]={date:item.date};
+                if(item.state>0)allDates[item.date].state=1;
+                else {
+                    allDates[item.date].state=-3;
+                    date.push(item.date);
+                }
+            })
 
-        async.mapLimit(dates,1,function(d,cb){
-            dbsuport.getfaces({no:global.shcode,date:d},function(err,items){
-                if(items==null||items.length==0||items[0].state==0)date.push(d);
-                cb(null,1);
-            });
-        },function(err,result){
+            dates.forEach(function (d) {
+                if(!allDates[d]){
+                    allDates[d]={
+                        date:d,
+                        state:-3
+                    }
+
+                    date.push(d);
+                }
+            })
             callback(null,date);
-        })
-
+        });
     });
 }
 
@@ -317,14 +328,14 @@ DataMeeter.prototype.startwork=function(){
 
         module.exports.console("start data meet");
         var downCall=function(err,dates){
-            if(err){
-                module.exports.startFiledown(downCall)
-            }
-            else {
-                module.exports.console("downFinished");
-               // module.exports.commitDateItems();
-                module.exports.isWorking=false;
-            }
+            // if(err){
+            //     module.exports.startFiledown(downCall)
+            // }
+            // else {
+            //     module.exports.console("downFinished");
+            //    // module.exports.commitDateItems();
+            //     module.exports.isWorking=false;
+            // }
         }
 
         module.exports.startFiledown(downCall)

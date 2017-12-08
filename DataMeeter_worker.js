@@ -57,7 +57,7 @@ worker.prototype.saveToDb = function (item, allcallback) {
                         state: 1
                     };
 
-                    module.exports.console( face.startprice+"pricepricepricepricepricepricepriceprice");
+                    //module.exports.console( face.startprice+"pricepricepricepricepricepricepriceprice");
 
                     dbsuport.updatacodeface(face, function (err, s) {
                         allcallback(0, true);
@@ -115,7 +115,7 @@ worker.prototype.getValuesFromfile = function (item, allcallback) {
                 if (items.length > 0)
                     item.lastprice = items[items.length - 1].price;
                 else item.lastprice = 0;
-                fs.unlink(file);
+                fs.unlink(file,function () {});
                 allcallback(0, items)
             })
         }
@@ -146,7 +146,9 @@ worker.prototype.start = function () {
             var item = msg.item;
             if (item != null) {
                 state = "working";
+
                 module.exports.saveToDb(item, function (err, result) {
+                    module.exports.console(" saveToDb saveToDb saveToDb saveToDb");
                     module.exports.sendMsg({
                         index: item.index,
                         result: err
