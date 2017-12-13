@@ -22,7 +22,6 @@ suporter.prototype.getConnction = function (callback) {
     module.exports.cindex += 1;
     if (module.exports.cindex >= module.exports.connctions.length)module.exports.cindex = 0;
 
-
     if (module.exports.connctions[curindex] == null) {
         module.exports.connctions[curindex] = mysql.createConnection({
             host: 'localhost',
@@ -74,7 +73,7 @@ suporter.prototype.saveTimePrice = function (timevalues, allcallback) {
         if (err == null) {
 
             async.mapLimit(lists, 1, function (items, callback) {
-                var insert = 'replace INTO time_price(no,time,price,trade_type,turnover_inc,volume) VALUES';
+                var insert = 'replace INTO time_price(id,_no,state) VALUES';
                 for (var i in items) {
                     insert += module.exports.getInsertStr(items[i]);
                     if (i == items.length - 1) insert += ';';
