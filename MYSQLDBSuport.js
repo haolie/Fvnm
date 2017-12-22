@@ -12,6 +12,7 @@ var util = require('util');
 global.shcode = 912261;
 
 
+
 var suporter = function () {
 }
 
@@ -38,6 +39,24 @@ suporter.prototype.getConnction = function (callback) {
     else
         callback(null, module.exports.connctions[curindex]);
 }
+
+suporter.prototype.CodesObj=null;
+
+suporter.prototype.initCodesObj=function (callback) {
+    current.getConnction(function (err,conn) {
+        conn.query('select * from tbl_codes',function (err,items) {
+            current.CodesObj=[];
+            items.each(function (item) {
+                current.CodesObj[item._no]=item.id;
+            })
+        })
+    })
+}
+
+suporter.prototype.initCodesObj=function (id) {
+
+}
+
 
 suporter.prototype.getInsertStr = function (item) {
     if (Number(item.no) < 1000000)item.no = Number(item.no) + 1000000;

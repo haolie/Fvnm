@@ -197,6 +197,18 @@ tool.prototype.isFunction=function (obj) {
     return Object.prototype.toString.call(obj) ==="[object Function]";
 }
 
+tool.prototype.getVMTime=function (timeSpan) {
+    var date= new Date( timeSpan);
+    return  (date.getHours()-9)*60*60+date.getMinutes() *60+date.getSeconds();
+}
+
+tool.prototype.getTimeSpanFromVMTime=function (vmtime) {
+    var s=vmtime%60;
+    var m=((vmtime-s)/60)%60;
+    var h=(vmtime-m*60-s)/60 +9;
+    return (h>10?h:0+h)+":"+(m>10?m:0+m)+":"+(s>10?s:0+s)
+}
+
 //tool.prototype.getDateStr=function(obj){
 //    if(util.isString(obj)){
 //        return obj;
