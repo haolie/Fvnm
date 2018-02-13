@@ -10,13 +10,10 @@ var time_price = "time_price";
 var process = require('process');
 var util = require('util');
 global.shcode = 912261;
-var maxCodeId=-1;
 
 var suporter = function () {
 
 }
-
-
 
 suporter.prototype.connctions = [null, null, null,null];
 suporter.prototype.cindex = 0;
@@ -53,7 +50,6 @@ suporter.prototype.initCodesObj=function (callback) {
         conn.query('select * from tbl_codes',function (err,items) {
             current.CodesObj={};
             items.each(function (item) {
-                maxCodeId=Math.max(maxCodeId,item.id);
                 current.CodesObj[item._no]=item.id;
             })
         })
@@ -67,8 +63,6 @@ suporter.prototype.getNoById=function (id) {
 
     return "";
 }
-
-
 
 suporter.prototype.getInsertStr = function (item) {
     if (Number(item.no) < 1000000)item.no = Number(item.no) + 1000000;
@@ -278,8 +272,6 @@ suporter.prototype.getValueSql = function (o, str, _default) {
 }
 
 suporter.prototype.savecodefaces = function (items, callback) {
-
-
     if (!(items instanceof Array)) items = [items];
     var lists = tool.getSpiedList(items, 300);
 
@@ -316,51 +308,6 @@ suporter.prototype.savecodefaces = function (items, callback) {
         });
     });
 
-}
-
-suporter.prototype.checkNoSave=function (items,callback) {
-    var codes=[];
-    items.forEach(function (item) {
-        codes.push(item.no)
-    })
-    current.saveNos(codes,callback)
-}
-
-suporter.prototype.saveNos=function (codes,callback) {
-    var temps=[];
-    codes.forEach(function (c) {
-        if(current.CodesObj[c])return;
-        maxCodeId++;
-        temps.push({id:maxCodeId,no:c});
-    })
-
-    if(temps.length==0){
-        callback(0,0)
-    }
-
-    module.exports.getConnction(function (err,conn) {
-        temps=tool.getSpiedList(temps,300);
-        async.mapLimit(temps,1,function (item,ab) {
-          var str="INSERT INTO tbl_codes(id,_no,state)" +
-              " VALUES";
-
-          item.forEach(function (n,i) {
-              str+='(' +
-                  n.id+","+
-                  n.no+
-                  ')';
-              if(i==item.length-1) str+";";
-              else str+",";
-          })
-
-            conn.query(str, function (err, result) {
-                ab(err, str);
-            })
-
-        },function (err,r) {
-            callback(0,0);
-        })
-    })
 }
 
 suporter.prototype.updatacodeface = function (item, callback) {
